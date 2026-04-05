@@ -41,6 +41,29 @@
         const googleProvider = new firebase.auth.GoogleAuthProvider();
 
         // ==================== FIRESTORE HELPERS ====================
+        // Week lock settings (stored in Firestore, controlled by teacher)
+        async function loadWeekSettings() {
+            try {
+                const doc = await db.collection('settings').doc('weekLocks').get();
+                if (doc.exists) return doc.data();
+                return null;
+            } catch (err) {
+                console.error('Failed to load week settings:', err);
+                return null;
+            }
+        }
+
+        async function saveWeekSettings(unlockedWeeks) {
+            try {
+                await db.collection('settings').doc('weekLocks').set({
+                    unlockedWeeks,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (err) {
+                console.error('Failed to save week settings:', err);
+            }
+        }
+
         // Save a sentence score to Firestore
         async function saveScoreToFirestore(userId, className, studentName, weekId, sentenceIdx, scoreData) {
             try {
@@ -69,8 +92,9 @@
                 const weeklyScores = {};
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    if (!weeklyScores[d.weekId]) weeklyScores[d.weekId] = {};
-                    weeklyScores[d.weekId][d.sentenceIdx] = {
+                    const wId = Number(d.weekId);
+                    if (!weeklyScores[wId]) weeklyScores[wId] = {};
+                    weeklyScores[wId][d.sentenceIdx] = {
                         accuracy: d.accuracy || 0,
                         fluency: d.fluency || 0,
                         prosody: d.prosody || 0,
@@ -102,8 +126,9 @@
                     if (!byStudent[key]) {
                         byStudent[key] = { studentName: d.studentName, className: d.className, weeks: {} };
                     }
-                    if (!byStudent[key].weeks[d.weekId]) byStudent[key].weeks[d.weekId] = {};
-                    byStudent[key].weeks[d.weekId][d.sentenceIdx] = {
+                    const wId = Number(d.weekId);
+                    if (!byStudent[key].weeks[wId]) byStudent[key].weeks[wId] = {};
+                    byStudent[key].weeks[wId][d.sentenceIdx] = {
                         accuracy: d.accuracy || 0,
                         fluency: d.fluency || 0,
                         prosody: d.prosody || 0,
@@ -124,34 +149,8 @@
         const { useState, useEffect, useMemo } = React;
 
         // ==================== UTILITIES ====================
-        function seededRandom(seed) {
-            const x = Math.sin(seed) * 10000;
-            return x - Math.floor(x);
-        }
-
-        function generateMockData(studentId, week) {
-            const seed1 = studentId * 100 + week * 10;
-            const seed2 = studentId * 101 + week * 11;
-            const seed3 = studentId * 102 + week * 12;
-
-            const rand1 = seededRandom(seed1);
-            const rand2 = seededRandom(seed2);
-            const rand3 = seededRandom(seed3);
-
-            const baseScore = 65 + rand1 * 25;
-            const contentScore = Math.round(baseScore + (rand2 - 0.5) * 10);
-            const pronunciationScore = Math.round(baseScore + (rand3 - 0.5) * 10);
-            const prosodyScore = Math.round(baseScore + (seededRandom(seed1 + 1) - 0.5) * 10);
-
-            return {
-                content: Math.max(0, Math.min(100, contentScore)),
-                pronunciation: Math.max(0, Math.min(100, pronunciationScore)),
-                prosody: Math.max(0, Math.min(100, prosodyScore))
-            };
-        }
-
-        function calculateTotalScore(content, pronunciation, prosody, lateDay = 0) {
-            const total = content * 0.3 + pronunciation * 0.3 + prosody * 0.4;
+        function calculateTotalScore(completeness, pronunciation, prosody, lateDay = 0) {
+            const total = completeness * 0.3 + pronunciation * 0.3 + prosody * 0.4;
             const penalty = Math.min(total, lateDay * 5);
             return Math.max(0, Math.round(total - penalty));
         }
@@ -283,15 +282,15 @@
         };
 
         const WEEKS = [
-            { id: 1, title: 'Daily Routines', locked: false },
-            { id: 2, title: 'Dating', locked: false },
-            { id: 3, title: 'Friendship', locked: false },
-            { id: 4, title: 'Playing Basketball', locked: true },
-            { id: 5, title: 'Cooking', locked: true },
-            { id: 6, title: 'Outdoor Activities', locked: true },
-            { id: 7, title: 'Airport English', locked: true },
-            { id: 8, title: 'Homestay English', locked: true },
-            { id: 9, title: 'AI & Technology', locked: true }
+            { id: 1, title: 'Daily Routines' },
+            { id: 2, title: 'Dating' },
+            { id: 3, title: 'Friendship' },
+            { id: 4, title: 'Playing Basketball' },
+            { id: 5, title: 'Cooking' },
+            { id: 6, title: 'Outdoor Activities' },
+            { id: 7, title: 'Airport English' },
+            { id: 8, title: 'Homestay English' },
+            { id: 9, title: 'AI & Technology' }
         ];
 
         const VOCABULARY = [
@@ -340,7 +339,9 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                     { text: 'Wakes up early and pulls an all-nighter', correct: false },
                     { text: 'Sleeps in on weekends and works out at night', correct: false },
                     { text: 'Has coffee on the go while getting ready', correct: false }
-                ]
+                ],
+                explanation: 'Alex mentions going to bed at 10 PM and waking up naturally at 6 AM without needing an alarm. This shows a consistent sleep schedule as part of a healthy daily routine.',
+                correctIndex: 0
             },
             {
                 id: 2,
@@ -350,7 +351,9 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                     { text: 'They are a night owl and do not feel awake until after noon', correct: true },
                     { text: 'They need to finish projects during the day', correct: false },
                     { text: 'They want to practice their morning routine', correct: false }
-                ]
+                ],
+                explanation: 'Jordan describes themselves as a "night owl" — someone who naturally stays up late and doesn\'t feel fully awake until after noon. This is a common way to talk about sleep preferences in English.',
+                correctIndex: 1
             },
             {
                 id: 3,
@@ -360,7 +363,9 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                     { text: 'Skip breakfast and grab a bite on the go', correct: false },
                     { text: 'Go to bed an hour earlier every night and stick to a routine', correct: true },
                     { text: 'Pull an all-nighter to catch up on sleep', correct: false }
-                ]
+                ],
+                explanation: 'Alex suggests Jordan try going to bed just one hour earlier each night and "stick to a routine" — meaning to follow a consistent schedule. The phrase "stick to" means to continue doing something regularly.',
+                correctIndex: 2
             }
         ];
 
@@ -399,25 +404,92 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
         function LoginScreen({ onLogin }) {
             const [mode, setMode] = useState(null);
             const [selectedClass, setSelectedClass] = useState(null);
+            const [selectedStudent, setSelectedStudent] = useState(null);
             const [password, setPassword] = useState('');
             const [isLoggingIn, setIsLoggingIn] = useState(false);
             const [error, setError] = useState('');
 
+            // Try quick login: if user already bound, skip class/name selection
             const handleGoogleLogin = async () => {
                 setIsLoggingIn(true);
                 setError('');
                 try {
                     const result = await auth.signInWithPopup(googleProvider);
                     const user = result.user;
-                    onLogin({
-                        role: 'student',
-                        class: selectedClass,
-                        studentId: user.uid,
-                        studentName: user.displayName || user.email,
-                        email: user.email,
-                        uid: user.uid,
-                        photoURL: user.photoURL
-                    });
+
+                    // Check if this Google account is already bound to a student
+                    const bindDoc = await db.collection('studentBindings').doc(user.uid).get();
+                    if (bindDoc.exists) {
+                        const binding = bindDoc.data();
+                        onLogin({
+                            role: 'student',
+                            class: binding.className,
+                            studentId: binding.studentId,
+                            studentName: binding.studentName,
+                            email: user.email,
+                            uid: user.uid,
+                            photoURL: user.photoURL
+                        });
+                        return;
+                    }
+
+                    // Not bound yet — need class + name selection
+                    // If they already selected class and name, bind now
+                    if (selectedClass && selectedStudent) {
+                        await db.collection('studentBindings').doc(user.uid).set({
+                            className: selectedClass,
+                            studentId: selectedStudent.id,
+                            studentName: selectedStudent.name,
+                            email: user.email,
+                            boundAt: new Date().toISOString()
+                        });
+                        onLogin({
+                            role: 'student',
+                            class: selectedClass,
+                            studentId: selectedStudent.id,
+                            studentName: selectedStudent.name,
+                            email: user.email,
+                            uid: user.uid,
+                            photoURL: user.photoURL
+                        });
+                    } else {
+                        // Shouldn't happen since button requires selection, but just in case
+                        setError('請先選擇班級和姓名');
+                        setIsLoggingIn(false);
+                    }
+                } catch (err) {
+                    console.error('Google login error:', err);
+                    setError('登入失敗，請再試一次');
+                    setIsLoggingIn(false);
+                }
+            };
+
+            // Quick login for returning students
+            const handleQuickGoogleLogin = async () => {
+                setIsLoggingIn(true);
+                setError('');
+                try {
+                    const result = await auth.signInWithPopup(googleProvider);
+                    const user = result.user;
+                    const bindDoc = await db.collection('studentBindings').doc(user.uid).get();
+                    if (bindDoc.exists) {
+                        const binding = bindDoc.data();
+                        onLogin({
+                            role: 'student',
+                            class: binding.className,
+                            studentId: binding.studentId,
+                            studentName: binding.studentName,
+                            email: user.email,
+                            uid: user.uid,
+                            photoURL: user.photoURL
+                        });
+                    } else {
+                        // First time — go to class/name selection
+                        await auth.signOut();
+                        setMode('student');
+                        setIsLoggingIn(false);
+                        setError('第一次登入請先選擇班級和姓名');
+                    }
                 } catch (err) {
                     console.error('Google login error:', err);
                     setError('登入失敗，請再試一次');
@@ -441,10 +513,18 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                             <h2 className="text-2xl font-bold text-gray-900 mb-8">Shadowing English</h2>
                             <p className="text-gray-600 mb-8">生活英語跟讀練習</p>
                             <button
-                                onClick={() => setMode('student')}
-                                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold mb-4 hover:bg-blue-700 transition"
+                                onClick={handleQuickGoogleLogin}
+                                disabled={isLoggingIn}
+                                className="w-full flex items-center justify-center gap-3 bg-blue-600 text-white py-3 rounded-lg font-semibold mb-4 hover:bg-blue-700 transition disabled:opacity-50"
                             >
-                                學生登入
+                                <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#fff" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#fff" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#fff" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#fff" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                                {isLoggingIn ? '登入中...' : '學生登入（Google）'}
+                            </button>
+                            <button
+                                onClick={() => setMode('first-time')}
+                                className="w-full bg-white text-blue-600 border-2 border-blue-200 py-3 rounded-lg font-semibold mb-4 hover:bg-blue-50 transition text-sm"
+                            >
+                                第一次使用？點這裡綁定帳號
                             </button>
                             <button
                                 onClick={() => setMode('teacher')}
@@ -452,23 +532,26 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                             >
                                 教師登入
                             </button>
+                            {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
                         </div>
                     </div>
                 );
             }
 
-            if (mode === 'student') {
+            if (mode === 'student' || mode === 'first-time') {
+                const classStudents = selectedClass ? (CLASSES[selectedClass] || []) : [];
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
                         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-                            <button onClick={() => { setMode(null); setError(''); }} className="text-blue-600 mb-6 font-semibold text-sm hover:text-blue-700">← 返回</button>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">學生登入</h2>
+                            <button onClick={() => { setMode(null); setError(''); setSelectedClass(null); setSelectedStudent(null); }} className="text-blue-600 mb-6 font-semibold text-sm hover:text-blue-700">← 返回</button>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">首次帳號綁定</h2>
+                            <p className="text-gray-500 text-sm mb-6">選擇班級和姓名後，用 Google 帳號登入，之後就會自動對應。</p>
 
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">先選擇班級</label>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">1. 選擇班級</label>
                                 <select
                                     value={selectedClass || ''}
-                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                    onChange={(e) => { setSelectedClass(e.target.value); setSelectedStudent(null); }}
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                 >
                                     <option value="">-- 請選擇班級 --</option>
@@ -479,13 +562,33 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                             </div>
 
                             {selectedClass && (
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">2. 選擇你的姓名</label>
+                                    <select
+                                        value={selectedStudent ? selectedStudent.id : ''}
+                                        onChange={(e) => {
+                                            const sid = parseInt(e.target.value);
+                                            const found = classStudents.find(s => s.id === sid);
+                                            setSelectedStudent(found || null);
+                                        }}
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    >
+                                        <option value="">-- 請選擇姓名 --</option>
+                                        {classStudents.map(s => (
+                                            <option key={s.id} value={s.id}>{String(s.id).padStart(2, '0')} {s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {selectedClass && selectedStudent && (
                                 <button
                                     onClick={handleGoogleLogin}
                                     disabled={isLoggingIn}
-                                    className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 hover:border-blue-400 transition disabled:opacity-50"
+                                    className="w-full flex items-center justify-center gap-3 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
                                 >
-                                    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                                    {isLoggingIn ? '登入中...' : '使用 Google 帳號登入'}
+                                    <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#fff" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#fff" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#fff" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#fff" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                                    {isLoggingIn ? '綁定中...' : '3. 用 Google 帳號綁定並登入'}
                                 </button>
                             )}
 
@@ -515,16 +618,24 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
             );
         }
 
-        function StudentDashboardTab() {
-            const avgScore = Math.round((75 + 82 + 88) / 3);
-            const completedWeeks = 3;
+        function StudentDashboardTab({ weeklyScores = {}, isWeekLocked = () => true }) {
+            // Calculate real scores from weeklyScores
+            const weekScoreMap = {};
+            WEEKS.forEach(week => {
+                const weekData = weeklyScores[week.id] || {};
+                const scores = Object.values(weekData).map(s => s.accuracy || s.score || 0).filter(s => s > 0);
+                weekScoreMap[week.id] = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+            });
+            const completedWeeks = Object.values(weekScoreMap).filter(s => s > 0).length;
+            const allScores = Object.values(weekScoreMap).filter(s => s > 0);
+            const avgScore = allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0;
 
             return (
                 <div className="space-y-6">
                     <div className="grid grid-cols-3 gap-4">
                         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                             <p className="text-gray-600 text-sm font-medium">本週主題</p>
-                            <p className="text-2xl font-bold text-blue-600 mt-2">Daily Routines</p>
+                            <p className="text-2xl font-bold text-blue-600 mt-2">{WEEKS[0].title}</p>
                         </div>
                         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                             <p className="text-gray-600 text-sm font-medium">平均分數</p>
@@ -540,10 +651,7 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                         <h3 className="font-bold text-gray-900 mb-4">周次成績進度</h3>
                         <div className="bar-chart">
                             {WEEKS.map((week, idx) => {
-                                let score = 0;
-                                if (idx === 0) score = 75;
-                                else if (idx === 1) score = 82;
-                                else if (idx === 2) score = 88;
+                                const score = weekScoreMap[week.id] || 0;
 
                                 return (
                                     <div key={week.id} className="flex-1 flex flex-col items-center">
@@ -565,10 +673,11 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
         }
 
         function LessonTab() {
-            const [answeredQuestions, setAnsweredQuestions] = useState({});
+            const [selectedAnswers, setSelectedAnswers] = useState({});
+            const [submitted, setSubmitted] = useState(false);
             const [playingSpeed, setPlayingSpeed] = useState(null);
             const [isSpeaking, setIsSpeaking] = useState(false);
-            const allAnswered = Object.keys(answeredQuestions).length === 3 && Object.values(answeredQuestions).every(a => a === true);
+            const allSelected = Object.keys(selectedAnswers).length === COMPREHENSION_QUESTIONS.length;
 
             // Highlight only exact target phrases in the dialogue
             const highlightDialogue = (text) => {
@@ -767,31 +876,95 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                     <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
                         <h3 className="font-bold text-gray-900 mb-4">理解力檢測</h3>
                         <div className="space-y-6">
-                            {COMPREHENSION_QUESTIONS.map((q) => (
-                                <div key={q.id} className="border-b border-gray-200 pb-4 last:border-0">
-                                    <p className="font-medium text-gray-900 mb-3">{q.id}. {q.question}</p>
-                                    <div className="space-y-2">
-                                        {q.options.map((opt, idx) => (
-                                            <label key={idx} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name={`q${q.id}`}
-                                                    onChange={() => {
-                                                        setAnsweredQuestions(prev => ({
-                                                            ...prev,
-                                                            [q.id]: opt.correct
-                                                        }));
-                                                    }}
-                                                    className="mr-3"
-                                                />
-                                                <span className="text-gray-700">{opt.text}</span>
-                                            </label>
-                                        ))}
+                            {COMPREHENSION_QUESTIONS.map((q) => {
+                                const selected = selectedAnswers[q.id];
+                                const isCorrect = selected !== undefined && q.options[selected]?.correct;
+                                return (
+                                    <div key={q.id} className="border-b border-gray-200 pb-4 last:border-0">
+                                        <p className="font-medium text-gray-900 mb-3">{q.id}. {q.question}</p>
+                                        <div className="space-y-2">
+                                            {q.options.map((opt, idx) => {
+                                                let borderColor = 'border-gray-200';
+                                                let bgColor = 'hover:bg-blue-50';
+                                                if (submitted) {
+                                                    if (opt.correct) {
+                                                        borderColor = 'border-green-500';
+                                                        bgColor = 'bg-green-50';
+                                                    } else if (selected === idx && !opt.correct) {
+                                                        borderColor = 'border-red-400';
+                                                        bgColor = 'bg-red-50';
+                                                    } else {
+                                                        bgColor = '';
+                                                    }
+                                                } else if (selected === idx) {
+                                                    borderColor = 'border-blue-400';
+                                                    bgColor = 'bg-blue-50';
+                                                }
+                                                return (
+                                                    <label key={idx} className={`flex items-center p-3 border ${borderColor} rounded-lg ${bgColor} ${submitted ? '' : 'cursor-pointer'}`}>
+                                                        <input
+                                                            type="radio"
+                                                            name={`q${q.id}`}
+                                                            disabled={submitted}
+                                                            checked={selected === idx}
+                                                            onChange={() => {
+                                                                setSelectedAnswers(prev => ({
+                                                                    ...prev,
+                                                                    [q.id]: idx
+                                                                }));
+                                                            }}
+                                                            className="mr-3"
+                                                        />
+                                                        <span className="text-gray-700">{opt.text}</span>
+                                                        {submitted && opt.correct && <span className="ml-auto text-green-600 font-bold">&#10004;</span>}
+                                                        {submitted && selected === idx && !opt.correct && <span className="ml-auto text-red-500 font-bold">&#10008;</span>}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        {submitted && (
+                                            <div className={`mt-3 p-3 rounded-lg text-sm ${isCorrect ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+                                                <p className="font-semibold mb-1">{isCorrect ? '✅ 答對了！' : '❌ 答錯了，正確答案是：' + q.options[q.correctIndex].text}</p>
+                                                <p className="text-gray-700">{q.explanation}</p>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
-                        {allAnswered && <div className="mt-4 p-3 bg-green-50 text-green-700 rounded-lg font-medium">✓ 所有問題已正確回答！</div>}
+                        {!submitted && (
+                            <button
+                                onClick={() => setSubmitted(true)}
+                                disabled={!allSelected}
+                                className={`mt-6 w-full py-3 rounded-lg font-semibold transition ${allSelected ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                            >
+                                送出答案
+                            </button>
+                        )}
+                        {submitted && (
+                            <div className="mt-4 space-y-3">
+                                <div className={`p-4 rounded-lg font-medium text-center ${
+                                    Object.keys(selectedAnswers).every(qId => {
+                                        const q = COMPREHENSION_QUESTIONS.find(c => c.id === parseInt(qId));
+                                        return q && q.options[selectedAnswers[qId]]?.correct;
+                                    }) ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                }`}>
+                                    {(() => {
+                                        const correctCount = Object.keys(selectedAnswers).filter(qId => {
+                                            const q = COMPREHENSION_QUESTIONS.find(c => c.id === parseInt(qId));
+                                            return q && q.options[selectedAnswers[qId]]?.correct;
+                                        }).length;
+                                        return `你答對了 ${correctCount}/${COMPREHENSION_QUESTIONS.length} 題`;
+                                    })()}
+                                </div>
+                                <button
+                                    onClick={() => { setSubmitted(false); setSelectedAnswers({}); }}
+                                    className="w-full py-2 rounded-lg font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+                                >
+                                    重新作答
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -1029,19 +1202,19 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                 const scoreValues = Object.values(sentenceScores);
                 if (scoreValues.length === 0) {
                     // Fallback if no individual scores
-                    const fallback = { content: 0, pronunciation: 0, prosody: 0, total: 0 };
+                    const fallback = { completeness: 0, pronunciation: 0, prosody: 0, total: 0 };
                     setRecordingScore(fallback);
                     return;
                 }
                 const avg = (key) => Math.round(scoreValues.reduce((sum, s) => sum + (s[key] || 0), 0) / scoreValues.length);
                 const aggregated = {
-                    content: avg('completeness'),
+                    completeness: avg('completeness'),
                     pronunciation: avg('pronunciation'),
                     prosody: avg('prosody'),
                     accuracy: avg('accuracy'),
                     fluency: avg('fluency'),
                 };
-                const total = calculateTotalScore(aggregated.content, aggregated.pronunciation, aggregated.prosody);
+                const total = calculateTotalScore(aggregated.completeness, aggregated.pronunciation, aggregated.prosody);
                 setRecordingScore({ ...aggregated, total });
             };
 
@@ -1392,7 +1565,7 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                             <h3 className="font-bold text-gray-900 mb-4">✅ AI 總評分結果（{Object.keys(sentenceScores).length} 句平均）</h3>
                             <div className="space-y-3">
                                 {[
-                                    { label: '完整度 (30%)', score: recordingScore.content, color: 'bg-blue-600' },
+                                    { label: '完整度 (30%)', score: recordingScore.completeness, color: 'bg-blue-600' },
                                     { label: '發音 (30%)', score: recordingScore.pronunciation, color: 'bg-purple-600' },
                                     { label: '語調韻律 (40%)', score: recordingScore.prosody, color: 'bg-pink-600' }
                                 ].map(item => (
@@ -1427,7 +1600,7 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
             );
         }
 
-        function HistoryTab() {
+        function HistoryTab({ isWeekLocked = () => true }) {
             const [openWeek, setOpenWeek] = useState(null);
             const historyStopRef = React.useRef(false);
 
@@ -1468,7 +1641,8 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                 <div className="space-y-4">
                     {WEEKS.map((week) => {
                         const isOpen = openWeek === week.id;
-                        const hasContent = !week.locked && weekDialogues[week.id];
+                        const locked = isWeekLocked(week.id);
+                        const hasContent = !locked && weekDialogues[week.id];
 
                         return (
                             <div key={week.id} className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
@@ -1479,13 +1653,13 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <span className={`text-lg ${week.locked ? '' : ''}`}>
-                                            {week.locked ? '🔒' : '✅'}
+                                        <span className="text-lg">
+                                            {locked ? '🔒' : '✅'}
                                         </span>
                                         <div>
                                             <h3 className="font-semibold text-gray-900">Week {week.id}: {week.title}</h3>
                                             <p className="text-xs text-gray-500">
-                                                {week.locked ? '尚未解鎖' : '點擊查看內容與播放'}
+                                                {locked ? '尚未解鎖' : '點擊查看內容與播放'}
                                             </p>
                                         </div>
                                     </div>
@@ -1538,9 +1712,18 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
         }
 
         function generateScorePDF(studentName, className, weekId, weekTitle, weekData) {
+            try {
+            if (!window.jspdf) {
+                alert('PDF 元件尚未載入，請稍候再試一次。');
+                return;
+            }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const sentenceEntries = Object.entries(weekData).sort(([a], [b]) => Number(a) - Number(b));
+            if (sentenceEntries.length === 0) {
+                alert('這週還沒有成績資料，請先完成跟讀練習。');
+                return;
+            }
             const avg = (key) => Math.round(sentenceEntries.reduce((sum, [, s]) => sum + (s[key] || 0), 0) / sentenceEntries.length);
             const avgAccuracy = avg('accuracy');
             const avgFluency = avg('fluency');
@@ -1608,8 +1791,11 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                 doc.text(String(sc.accuracy || 0), 130, y + 4);
                 doc.text(String(sc.fluency || 0), 145, y + 4);
                 doc.text(String(sc.prosody || 0), 160, y + 4);
-                doc.setTextColor(sentTotal >= 80 ? [22, 163, 74] : sentTotal >= 60 ? [37, 99, 235] : [234, 88, 12]);
+                if (sentTotal >= 80) doc.setTextColor(22, 163, 74);
+                else if (sentTotal >= 60) doc.setTextColor(37, 99, 235);
+                else doc.setTextColor(234, 88, 12);
                 doc.text(String(sentTotal), 175, y + 4);
+                doc.setTextColor(31, 41, 55);
                 doc.setDrawColor(229, 231, 235);
                 doc.line(20, y + 7, 190, y + 7);
                 y += 9;
@@ -1633,15 +1819,19 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
             doc.text("Stephanie's English Lab - AI Pronunciation Assessment powered by Azure Speech Service", 105, y, { align: 'center' });
 
             doc.save('Shadowing_Week' + weekId + '_' + studentName + '.pdf');
+            } catch (err) {
+                console.error('PDF generation error:', err);
+                alert('PDF 產生失敗：' + err.message);
+            }
         }
 
-        function ScoresTab({ weeklyScores = {}, user = {} }) {
+        function ScoresTab({ weeklyScores = {}, user = {}, isWeekLocked = () => true }) {
             const [expandedWeek, setExpandedWeek] = useState(null);
             const [expandedSentence, setExpandedSentence] = useState(null);
 
             return (
                 <div className="space-y-4">
-                    {WEEKS.filter(w => !w.locked).map((week) => {
+                    {WEEKS.filter(w => !isWeekLocked(w.id)).map((week) => {
                         const weekData = weeklyScores[week.id] || {};
                         const sentenceEntries = Object.entries(weekData);
                         const hasScores = sentenceEntries.length > 0;
@@ -1902,7 +2092,7 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
             );
         }
 
-        function StudentPortal({ user, onLogout }) {
+        function StudentPortal({ user, onLogout, isWeekLocked }) {
             const [activeTab, setActiveTab] = useState('dashboard');
             // Shared state: real AI scores from practice, keyed by week then sentence index
             const [weeklyScores, setWeeklyScores] = useState({});
@@ -1965,11 +2155,11 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                         </div>
 
                         <div>
-                            {activeTab === 'dashboard' && <StudentDashboardTab />}
+                            {activeTab === 'dashboard' && <StudentDashboardTab weeklyScores={weeklyScores} isWeekLocked={isWeekLocked} />}
                             {activeTab === 'lesson' && <LessonTab />}
                             {activeTab === 'practice' && <PracticeTab weeklyScores={weeklyScores} setWeeklyScores={setWeeklyScores} user={user} />}
-                            {activeTab === 'history' && <HistoryTab />}
-                            {activeTab === 'scores' && <ScoresTab weeklyScores={weeklyScores} user={user} />}
+                            {activeTab === 'history' && <HistoryTab isWeekLocked={isWeekLocked} />}
+                            {activeTab === 'scores' && <ScoresTab weeklyScores={weeklyScores} user={user} isWeekLocked={isWeekLocked} />}
                         </div>
                     </div>
 
@@ -1985,20 +2175,49 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
             );
         }
 
-        function TeacherStatusTab({ selectedClass, setSelectedClass }) {
+        function TeacherStatusTab({ selectedClass, setSelectedClass, unlockedWeeks = [], setUnlockedWeeks }) {
             const students = CLASSES[selectedClass];
+            const [allScores, setAllScores] = useState({});
+            const [loading, setLoading] = useState(true);
 
-            const generateStatus = (studentId, week) => {
-                const seed = studentId * 100 + week * 10;
-                const rand = seededRandom(seed);
+            useEffect(() => {
+                setLoading(true);
+                loadAllScores(selectedClass).then(data => {
+                    setAllScores(data);
+                    setLoading(false);
+                });
+            }, [selectedClass]);
 
-                if (week > 3) return { status: 'locked', lateDay: 0 };
-                if (rand < 0.15) return { status: 'notSubmitted', lateDay: 0 };
-                if (rand < 0.30) {
-                    const lateDay = Math.floor(seededRandom(seed + 1) * 4) + 1;
-                    return { status: 'late', lateDay };
+            // Build a lookup: studentName → { weekId: { sentences } }
+            const scoresByName = useMemo(() => {
+                const map = {};
+                Object.values(allScores).forEach(entry => {
+                    const name = entry.studentName;
+                    if (!map[name]) map[name] = {};
+                    Object.entries(entry.weeks || {}).forEach(([wId, wData]) => {
+                        map[name][wId] = wData;
+                    });
+                });
+                return map;
+            }, [allScores]);
+
+            const getStatus = (studentName, weekId) => {
+                if (!unlockedWeeks.includes(weekId)) return { status: 'locked', lateDay: 0 };
+                const studentWeeks = scoresByName[studentName];
+                if (!studentWeeks || !studentWeeks[weekId]) return { status: 'notSubmitted', lateDay: 0 };
+                const hasScores = Object.keys(studentWeeks[weekId]).length > 0;
+                return hasScores ? { status: 'submitted', lateDay: 0 } : { status: 'notSubmitted', lateDay: 0 };
+            };
+
+            const toggleWeekLock = async (weekId) => {
+                let newUnlocked;
+                if (unlockedWeeks.includes(weekId)) {
+                    newUnlocked = unlockedWeeks.filter(id => id !== weekId);
+                } else {
+                    newUnlocked = [...unlockedWeeks, weekId].sort((a, b) => a - b);
                 }
-                return { status: 'submitted', lateDay: 0 };
+                setUnlockedWeeks(newUnlocked);
+                await saveWeekSettings(newUnlocked);
             };
 
             const handleExcel = () => {
@@ -2013,11 +2232,11 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                 students.forEach(student => {
                     const row = [`${String(student.id).padStart(2, '0')} ${student.name}`];
                     WEEKS.forEach(week => {
-                        const status = generateStatus(student.id, week.id);
+                        const status = getStatus(student.name, week.id);
                         if (status.status === 'locked') row.push('🔒');
                         else if (status.status === 'submitted') row.push('✅');
                         else if (status.status === 'late') row.push(`⏱ ${status.lateDay}d`);
-                        else row.push('❌');
+                        else row.push('—');
                     });
                     ws_data.push(row);
                 });
@@ -2048,7 +2267,28 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100 overflow-x-auto">
+                    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                            <span className="text-sm font-semibold text-gray-700 mr-2">週次開放設定：</span>
+                            {WEEKS.map(w => {
+                                const isOpen = unlockedWeeks.includes(w.id);
+                                return (
+                                    <button
+                                        key={w.id}
+                                        onClick={() => toggleWeekLock(w.id)}
+                                        className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                                            isOpen
+                                                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                                                : 'bg-gray-100 text-gray-400 border border-gray-200'
+                                        }`}
+                                        title={isOpen ? '點擊鎖定' : '點擊開放'}
+                                    >
+                                        {isOpen ? '🔓' : '🔒'} W{w.id}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-200">
@@ -2063,11 +2303,12 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                                     <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                                         <td className="py-3 px-4 text-gray-900 font-medium">{String(student.id).padStart(2, '0')} {student.name}</td>
                                         {WEEKS.map(week => {
-                                            const status = generateStatus(student.id, week.id);
+                                            const status = getStatus(student.name, week.id);
                                             let icon = '⚪';
                                             if (status.status === 'submitted') icon = '🟢';
                                             else if (status.status === 'late') icon = '🟡';
-                                            else if (status.status === 'notSubmitted') icon = '🔴';
+                                            else if (status.status === 'notSubmitted') icon = '⚪';
+                                            else if (status.status === 'locked') icon = '🔒';
 
                                             return (
                                                 <td key={week.id} className="text-center py-3 px-2 text-lg">
@@ -2082,12 +2323,13 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
             );
         }
 
-        function TeacherScoresTab({ selectedClass, setSelectedClass }) {
+        function TeacherScoresTab({ selectedClass, setSelectedClass, unlockedWeeks = [] }) {
             const [allScores, setAllScores] = useState({});
             const [loading, setLoading] = useState(true);
             const [selectedStudentId, setSelectedStudentId] = useState(null);
@@ -2227,7 +2469,7 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                                 <thead>
                                     <tr className="border-b border-gray-200">
                                         <th className="text-left py-3 px-4 font-semibold text-gray-900">學生</th>
-                                        {WEEKS.filter(w => !w.locked).map(w => (
+                                        {WEEKS.filter(w => unlockedWeeks.includes(w.id)).map(w => (
                                             <th key={w.id} className="text-center py-3 px-2 font-semibold text-gray-900 whitespace-nowrap">W{w.id}</th>
                                         ))}
                                     </tr>
@@ -2238,7 +2480,7 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                                             <td onClick={() => setSelectedStudentId(student.uid)} className="py-3 px-4 text-gray-900 font-medium cursor-pointer hover:text-emerald-600">
                                                 {student.name}
                                             </td>
-                                            {WEEKS.filter(w => !w.locked).map(week => {
+                                            {WEEKS.filter(w => unlockedWeeks.includes(w.id)).map(week => {
                                                 const wt = student.weekTotals[week.id];
                                                 return (
                                                     <td key={week.id} className="text-center py-3 px-2">
@@ -2264,50 +2506,75 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
         }
 
         function TeacherAnalyticsTab({ selectedClass }) {
-            const students = CLASSES[selectedClass];
-            const avgByWeek = {};
+            const [allScores, setAllScores] = useState({});
+            const [loading, setLoading] = useState(true);
 
-            WEEKS.forEach(week => {
-                let sum = 0;
-                let count = 0;
-                students.forEach(student => {
-                    if (week.id <= 3) {
-                        const scores = generateMockData(student.id, week.id);
-                        const total = calculateTotalScore(scores.content, scores.pronunciation, scores.prosody);
-                        sum += total;
-                        count++;
-                    }
+            useEffect(() => {
+                setLoading(true);
+                loadAllScores(selectedClass).then(data => {
+                    setAllScores(data);
+                    setLoading(false);
                 });
-                avgByWeek[week.id] = count > 0 ? Math.round(sum / count) : 0;
-            });
+            }, [selectedClass]);
+
+            // Calculate class average per week from real Firestore data
+            const avgByWeek = useMemo(() => {
+                const result = {};
+                WEEKS.forEach(week => {
+                    let sum = 0;
+                    let count = 0;
+                    Object.values(allScores).forEach(studentEntry => {
+                        const weekData = (studentEntry.weeks || {})[week.id] || (studentEntry.weeks || {})[String(week.id)];
+                        if (weekData && Object.keys(weekData).length > 0) {
+                            const scores = Object.values(weekData);
+                            const avgComp = scores.reduce((s, sc) => s + (sc.completeness || 0), 0) / scores.length;
+                            const avgPron = scores.reduce((s, sc) => s + (sc.pronunciation || 0), 0) / scores.length;
+                            const avgPros = scores.reduce((s, sc) => s + (sc.prosody || 0), 0) / scores.length;
+                            const total = calculateTotalScore(avgComp, avgPron, avgPros);
+                            sum += total;
+                            count++;
+                        }
+                    });
+                    result[week.id] = count > 0 ? Math.round(sum / count) : 0;
+                });
+                return result;
+            }, [allScores]);
+
+            if (loading) {
+                return <div className="text-center py-12 text-gray-500">載入中...</div>;
+            }
 
             return (
                 <div className="space-y-6">
                     <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
                         <h3 className="font-bold text-gray-900 mb-4">班級平均分數</h3>
-                        <div className="teacher bar-chart">
-                            {WEEKS.map((week) => {
-                                const avg = avgByWeek[week.id];
-                                return (
-                                    <div key={week.id} className="flex-1 flex flex-col items-center">
-                                        <div style={{
-                                            width: '100%',
-                                            height: avg > 0 ? `${avg}px` : '2px',
-                                            display: avg > 0 ? 'block' : 'none'
-                                        }} className="bar-segment"></div>
-                                        {avg === 0 && <div className="w-full h-1 bg-gray-300 rounded"></div>}
-                                        <div className="bar-label font-medium text-gray-700">W{week.id}</div>
-                                        {avg > 0 && <div className="bar-label text-xs text-gray-500">{avg}</div>}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        {Object.values(avgByWeek).every(v => v === 0) ? (
+                            <p className="text-gray-500 text-center py-8">目前還沒有學生成績資料</p>
+                        ) : (
+                            <div className="teacher bar-chart">
+                                {WEEKS.map((week) => {
+                                    const avg = avgByWeek[week.id];
+                                    return (
+                                        <div key={week.id} className="flex-1 flex flex-col items-center">
+                                            <div style={{
+                                                width: '100%',
+                                                height: avg > 0 ? `${avg}px` : '2px',
+                                                display: avg > 0 ? 'block' : 'none'
+                                            }} className="bar-segment"></div>
+                                            {avg === 0 && <div className="w-full h-1 bg-gray-300 rounded"></div>}
+                                            <div className="bar-label font-medium text-gray-700">W{week.id}</div>
+                                            {avg > 0 && <div className="bar-label text-xs text-gray-500">{avg}</div>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
             );
         }
 
-        function TeacherPortal({ onLogout }) {
+        function TeacherPortal({ onLogout, unlockedWeeks, setUnlockedWeeks }) {
             const [activeTab, setActiveTab] = useState('status');
             const [selectedClass, setSelectedClass] = useState('電機一忠');
 
@@ -2350,8 +2617,8 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
                         </div>
 
                         <div>
-                            {activeTab === 'status' && <TeacherStatusTab selectedClass={selectedClass} setSelectedClass={setSelectedClass} />}
-                            {activeTab === 'scores' && <TeacherScoresTab selectedClass={selectedClass} setSelectedClass={setSelectedClass} />}
+                            {activeTab === 'status' && <TeacherStatusTab selectedClass={selectedClass} setSelectedClass={setSelectedClass} unlockedWeeks={unlockedWeeks} setUnlockedWeeks={setUnlockedWeeks} />}
+                            {activeTab === 'scores' && <TeacherScoresTab selectedClass={selectedClass} setSelectedClass={setSelectedClass} unlockedWeeks={unlockedWeeks} />}
                             {activeTab === 'analytics' && <TeacherAnalyticsTab selectedClass={selectedClass} />}
                         </div>
                     </div>
@@ -2371,6 +2638,19 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
         // ==================== MAIN APP ====================
         function App() {
             const [user, setUser] = useState(null);
+            const [unlockedWeeks, setUnlockedWeeks] = useState([1, 2, 3]); // default: first 3 weeks open
+
+            // Load week settings from Firestore on mount
+            useEffect(() => {
+                loadWeekSettings().then(settings => {
+                    if (settings && settings.unlockedWeeks) {
+                        setUnlockedWeeks(settings.unlockedWeeks);
+                    }
+                });
+            }, []);
+
+            // Helper: check if a week is locked
+            const isWeekLocked = (weekId) => !unlockedWeeks.includes(weekId);
 
             const handleLogin = (loginData) => {
                 setUser(loginData);
@@ -2386,10 +2666,10 @@ Alex: That's the spirit! Start small. Even hitting the gym three times a week wo
             }
 
             if (user.role === 'student') {
-                return <StudentPortal user={user} onLogout={handleLogout} />;
+                return <StudentPortal user={user} onLogout={handleLogout} isWeekLocked={isWeekLocked} />;
             }
 
-            return <TeacherPortal onLogout={handleLogout} />;
+            return <TeacherPortal onLogout={handleLogout} unlockedWeeks={unlockedWeeks} setUnlockedWeeks={setUnlockedWeeks} />;
         }
 
         // ==================== RENDER ====================
