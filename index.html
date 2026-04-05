@@ -11,6 +11,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -113,37 +114,53 @@
             }
         }
 
-        // Load ALL scores for teacher view
+        // Load ALL scores for teacher view (one-time)
         async function loadAllScores(className) {
             try {
                 let query = db.collection('scores');
                 if (className) query = query.where('className', '==', className);
                 const snapshot = await query.get();
-                const byStudent = {};
-                snapshot.forEach(doc => {
-                    const d = doc.data();
-                    const key = d.userId;
-                    if (!byStudent[key]) {
-                        byStudent[key] = { studentName: d.studentName, className: d.className, weeks: {} };
-                    }
-                    const wId = Number(d.weekId);
-                    if (!byStudent[key].weeks[wId]) byStudent[key].weeks[wId] = {};
-                    byStudent[key].weeks[wId][d.sentenceIdx] = {
-                        accuracy: d.accuracy || 0,
-                        fluency: d.fluency || 0,
-                        prosody: d.prosody || 0,
-                        pronunciation: d.pronunciation || 0,
-                        completeness: d.completeness || 0,
-                        content: d.content || 0,
-                        recognizedText: d.recognizedText || '',
-                        words: d.words || [],
-                    };
-                });
-                return byStudent;
+                return parseScoresSnapshot(snapshot);
             } catch (err) {
                 console.error('Failed to load all scores:', err);
                 return {};
             }
+        }
+
+        // Helper: parse a Firestore snapshot into byStudent map
+        function parseScoresSnapshot(snapshot) {
+            const byStudent = {};
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const key = d.userId;
+                if (!byStudent[key]) {
+                    byStudent[key] = { studentName: d.studentName, className: d.className, weeks: {} };
+                }
+                const wId = Number(d.weekId);
+                if (!byStudent[key].weeks[wId]) byStudent[key].weeks[wId] = {};
+                byStudent[key].weeks[wId][d.sentenceIdx] = {
+                    accuracy: d.accuracy || 0,
+                    fluency: d.fluency || 0,
+                    prosody: d.prosody || 0,
+                    pronunciation: d.pronunciation || 0,
+                    completeness: d.completeness || 0,
+                    content: d.content || 0,
+                    recognizedText: d.recognizedText || '',
+                    words: d.words || [],
+                };
+            });
+            return byStudent;
+        }
+
+        // Real-time listener for teacher view — auto-syncs when students submit scores
+        function listenAllScores(className, callback) {
+            let query = db.collection('scores');
+            if (className) query = query.where('className', '==', className);
+            return query.onSnapshot(snapshot => {
+                callback(parseScoresSnapshot(snapshot));
+            }, err => {
+                console.error('Score listener error:', err);
+            });
         }
 
         const { useState, useEffect, useMemo } = React;
@@ -1589,28 +1606,29 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
 
             const audioPlayerRef = React.useRef(null);
 
+            const [audioError, setAudioError] = useState(null);
+
             const playSentence = () => {
                 setPhase('listening');
                 setIsPlaying(true);
+                setAudioError(null);
 
                 const audioSrc = getSentenceAudioSrc(weekId, currentIdx + 1);
+                console.log('[Audio] Loading ElevenLabs mp3:', audioSrc);
                 const audio = new Audio(audioSrc);
                 audioPlayerRef.current = audio;
                 audio.onended = () => { setIsPlaying(false); setPhase('canRecord'); };
-                audio.onerror = () => {
-                    // Fallback to browser TTS if mp3 not found
-                    const u = new SpeechSynthesisUtterance(currentSentence.text);
-                    u.lang = 'en-US'; u.rate = 0.85;
-                    u.onend = () => { setIsPlaying(false); setPhase('canRecord'); };
-                    u.onerror = () => { setIsPlaying(false); setPhase('canRecord'); };
-                    window.speechSynthesis.speak(u);
+                audio.onerror = (e) => {
+                    console.error('[Audio] mp3 載入失敗:', audioSrc, e);
+                    setAudioError('音檔載入失敗：' + audioSrc + ' — 請確認 GitHub 上有此檔案');
+                    setIsPlaying(false);
+                    setPhase('ready');
                 };
-                audio.play().catch(() => {
-                    const u = new SpeechSynthesisUtterance(currentSentence.text);
-                    u.lang = 'en-US'; u.rate = 0.85;
-                    u.onend = () => { setIsPlaying(false); setPhase('canRecord'); };
-                    u.onerror = () => { setIsPlaying(false); setPhase('canRecord'); };
-                    window.speechSynthesis.speak(u);
+                audio.play().catch((err) => {
+                    console.error('[Audio] mp3 播放失敗:', audioSrc, err);
+                    setAudioError('音檔播放失敗：' + audioSrc + ' — 請確認 GitHub 上有此檔案');
+                    setIsPlaying(false);
+                    setPhase('ready');
                 });
             };
 
@@ -1997,6 +2015,14 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                             );
                         })()}
 
+                        {/* Audio error message */}
+                        {audioError && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
+                                <p className="text-red-700 text-sm font-medium">❌ {audioError}</p>
+                                <p className="text-red-500 text-xs mt-1">請確認 GitHub 倉庫中有對應的 mp3 檔案（例如 W1/W1_S1.mp3）</p>
+                            </div>
+                        )}
+
                         {/* Action buttons */}
                         <div className="flex gap-3 flex-wrap">
                             {phase === 'ready' && (
@@ -2180,12 +2206,10 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
 
         function generateScorePDF(studentName, className, weekId, weekTitle, weekData) {
             try {
-            if (!window.jspdf) {
+            if (!window.html2pdf) {
                 alert('PDF 元件尚未載入，請稍候再試一次。');
                 return;
             }
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
             const sentenceEntries = Object.entries(weekData).sort(([a], [b]) => Number(a) - Number(b));
             if (sentenceEntries.length === 0) {
                 alert('這週還沒有成績資料，請先完成跟讀練習。');
@@ -2196,96 +2220,87 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
             const avgFluency = avg('fluency');
             const avgProsody = avg('prosody');
             const avgCompleteness = avg('completeness');
-            const avgPronunciation = avg('pronunciation');
             const totalScore = calculateTotalScore(avgAccuracy, avgCompleteness, avgProsody);
 
-            // Header
-            doc.setFontSize(20);
-            doc.setTextColor(37, 99, 235);
-            doc.text('Shadowing English', 105, 20, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(107, 114, 128);
-            doc.text('Pronunciation Assessment Report', 105, 28, { align: 'center' });
+            const scoreColor = totalScore >= 80 ? '#16a34a' : totalScore >= 60 ? '#2563eb' : '#ea580c';
 
-            // Student info
-            doc.setFontSize(11);
-            doc.setTextColor(31, 41, 55);
-            doc.text('Student: ' + studentName, 20, 42);
-            doc.text('Class: ' + className, 20, 50);
-            doc.text('Week ' + weekId + ': ' + weekTitle, 20, 58);
-            doc.text('Date: ' + new Date().toLocaleDateString('zh-TW'), 20, 66);
-
-            // Total score box
-            doc.setFillColor(239, 246, 255);
-            doc.roundedRect(20, 74, 170, 28, 3, 3, 'F');
-            doc.setFontSize(14);
-            doc.setTextColor(37, 99, 235);
-            doc.text('Total Score: ' + totalScore + ' / 100', 105, 86, { align: 'center' });
-            doc.setFontSize(9);
-            doc.setTextColor(107, 114, 128);
-            doc.text('Accuracy(30%): ' + avgAccuracy + '  |  Completeness(30%): ' + avgCompleteness + '  |  Prosody(40%): ' + avgProsody + '  |  Fluency(ref): ' + avgFluency, 105, 96, { align: 'center' });
-
-            // Per-sentence table
-            let y = 114;
-            doc.setFontSize(12);
-            doc.setTextColor(31, 41, 55);
-            doc.text('Per-Sentence Breakdown', 20, y);
-            y += 8;
-
-            // Table header
-            doc.setFillColor(243, 244, 246);
-            doc.rect(20, y, 170, 8, 'F');
-            doc.setFontSize(8);
-            doc.setTextColor(75, 85, 99);
-            doc.text('#', 24, y + 6);
-            doc.text('Sentence', 32, y + 6);
-            doc.text('Acc(30%)', 125, y + 6);
-            doc.text('Comp(30%)', 142, y + 6);
-            doc.text('Pro(40%)', 160, y + 6);
-            doc.text('Score', 178, y + 6);
-            y += 10;
-
+            // Build sentence rows HTML
+            let sentenceRows = '';
             sentenceEntries.forEach(([idx, sc]) => {
-                if (y > 270) { doc.addPage(); y = 20; }
                 const sentNum = Number(idx) + 1;
                 const sentText = sc.sentence?.text || 'Sentence ' + sentNum;
                 const sentTotal = calculateTotalScore(sc.accuracy || 0, sc.completeness || 0, sc.prosody || 0);
-
-                doc.setFontSize(8);
-                doc.setTextColor(31, 41, 55);
-                doc.text(String(sentNum), 24, y + 4);
-                doc.text(sentText.substring(0, 55) + (sentText.length > 55 ? '...' : ''), 32, y + 4);
-                doc.text(String(sc.accuracy || 0), 125, y + 4);
-                doc.text(String(sc.completeness || 0), 142, y + 4);
-                doc.text(String(sc.prosody || 0), 160, y + 4);
-                if (sentTotal >= 80) doc.setTextColor(22, 163, 74);
-                else if (sentTotal >= 60) doc.setTextColor(37, 99, 235);
-                else doc.setTextColor(234, 88, 12);
-                doc.text(String(sentTotal), 178, y + 4);
-                doc.setTextColor(31, 41, 55);
-                doc.setDrawColor(229, 231, 235);
-                doc.line(20, y + 7, 190, y + 7);
-                y += 9;
-
-                // Show weak words
+                const color = sentTotal >= 80 ? '#16a34a' : sentTotal >= 60 ? '#2563eb' : '#ea580c';
                 const weakWords = (sc.words || []).filter(w => w.accuracyScore < 60 || w.errorType !== 'None');
-                if (weakWords.length > 0) {
-                    doc.setFontSize(7);
-                    doc.setTextColor(220, 38, 38);
-                    const weakStr = 'Needs work: ' + weakWords.map(w => w.word + '(' + w.accuracyScore + ')').join(', ');
-                    doc.text(weakStr.substring(0, 80), 32, y + 3);
-                    y += 7;
-                }
+                const weakStr = weakWords.length > 0
+                    ? '<div style="color:#dc2626;font-size:11px;padding:2px 0 4px 24px;">Needs work: ' + weakWords.map(w => w.word + '(' + w.accuracyScore + ')').join(', ') + '</div>'
+                    : '';
+
+                sentenceRows += '<tr style="border-bottom:1px solid #e5e7eb;">' +
+                    '<td style="padding:6px 8px;font-size:12px;color:#6b7280;text-align:center;">' + sentNum + '</td>' +
+                    '<td style="padding:6px 8px;font-size:12px;color:#1f2937;">' + sentText + '</td>' +
+                    '<td style="padding:6px 8px;font-size:12px;text-align:center;">' + (sc.accuracy || 0) + '</td>' +
+                    '<td style="padding:6px 8px;font-size:12px;text-align:center;">' + (sc.completeness || 0) + '</td>' +
+                    '<td style="padding:6px 8px;font-size:12px;text-align:center;">' + (sc.prosody || 0) + '</td>' +
+                    '<td style="padding:6px 8px;font-size:13px;font-weight:bold;text-align:center;color:' + color + ';">' + sentTotal + '</td>' +
+                    '</tr>' + (weakStr ? '<tr><td colspan="6">' + weakStr + '</td></tr>' : '');
             });
 
-            // Footer
-            y += 10;
-            if (y > 270) { doc.addPage(); y = 20; }
-            doc.setFontSize(8);
-            doc.setTextColor(156, 163, 175);
-            doc.text("Stephanie's English Lab - AI Pronunciation Assessment powered by Azure Speech Service", 105, y, { align: 'center' });
+            const htmlContent = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:24px;max-width:720px;margin:0 auto;">' +
+                '<div style="text-align:center;margin-bottom:20px;">' +
+                    '<h1 style="color:#2563eb;font-size:22px;margin:0;">Shadowing English</h1>' +
+                    '<p style="color:#6b7280;font-size:12px;margin:4px 0 0;">Pronunciation Assessment Report</p>' +
+                '</div>' +
+                '<div style="margin-bottom:16px;font-size:13px;color:#1f2937;line-height:1.8;">' +
+                    '<div><strong>Student 學生：</strong>' + studentName + '</div>' +
+                    '<div><strong>Class 班級：</strong>' + className + '</div>' +
+                    '<div><strong>Week 週次：</strong>Week ' + weekId + ' - ' + weekTitle + '</div>' +
+                    '<div><strong>Date 日期：</strong>' + new Date().toLocaleDateString('zh-TW') + '</div>' +
+                '</div>' +
+                '<div style="background:#eff6ff;border-radius:8px;padding:16px;text-align:center;margin-bottom:20px;">' +
+                    '<div style="font-size:28px;font-weight:bold;color:' + scoreColor + ';">Total Score: ' + totalScore + ' / 100</div>' +
+                    '<div style="font-size:11px;color:#6b7280;margin-top:6px;">' +
+                        'Accuracy(30%): ' + avgAccuracy + '　|　Completeness(30%): ' + avgCompleteness + '　|　Prosody(40%): ' + avgProsody + '　|　Fluency(ref): ' + avgFluency +
+                    '</div>' +
+                '</div>' +
+                '<h3 style="font-size:14px;color:#1f2937;margin-bottom:8px;">Per-Sentence Breakdown</h3>' +
+                '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+                    '<thead><tr style="background:#f3f4f6;">' +
+                        '<th style="padding:6px 8px;text-align:center;font-size:11px;color:#4b5563;">#</th>' +
+                        '<th style="padding:6px 8px;text-align:left;font-size:11px;color:#4b5563;">Sentence</th>' +
+                        '<th style="padding:6px 8px;text-align:center;font-size:11px;color:#4b5563;">Acc(30%)</th>' +
+                        '<th style="padding:6px 8px;text-align:center;font-size:11px;color:#4b5563;">Comp(30%)</th>' +
+                        '<th style="padding:6px 8px;text-align:center;font-size:11px;color:#4b5563;">Pro(40%)</th>' +
+                        '<th style="padding:6px 8px;text-align:center;font-size:11px;color:#4b5563;">Score</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + sentenceRows + '</tbody>' +
+                '</table>' +
+                '<div style="text-align:center;margin-top:24px;font-size:10px;color:#9ca3af;">' +
+                    "Stephanie's English Lab — AI Pronunciation Assessment powered by Azure Speech Service" +
+                '</div>' +
+            '</div>';
 
-            doc.save('Shadowing_Week' + weekId + '_' + studentName + '.pdf');
+            // Create a temporary container
+            const container = document.createElement('div');
+            container.innerHTML = htmlContent;
+            container.style.position = 'fixed';
+            container.style.left = '-9999px';
+            document.body.appendChild(container);
+
+            html2pdf().set({
+                margin: [10, 10, 10, 10],
+                filename: 'Shadowing_Week' + weekId + '_' + studentName + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(container).save().then(() => {
+                document.body.removeChild(container);
+            }).catch(err => {
+                document.body.removeChild(container);
+                console.error('PDF generation error:', err);
+                alert('PDF 產生失敗：' + err.message);
+            });
+
             } catch (err) {
                 console.error('PDF generation error:', err);
                 alert('PDF 產生失敗：' + err.message);
@@ -2677,12 +2692,14 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
             const [allScores, setAllScores] = useState({});
             const [loading, setLoading] = useState(true);
 
+            // Real-time listener: auto-updates when students submit scores
             useEffect(() => {
                 setLoading(true);
-                loadAllScores(selectedClass).then(data => {
+                const unsubscribe = listenAllScores(selectedClass, (data) => {
                     setAllScores(data);
                     setLoading(false);
                 });
+                return () => unsubscribe(); // cleanup on unmount or class change
             }, [selectedClass]);
 
             // Build a lookup: studentName → { weekId: { sentences } }
@@ -2762,6 +2779,9 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                         >
                             匯出 Excel
                         </button>
+                        <span className="px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-200">
+                            🟢 即時同步中
+                        </span>
                     </div>
 
                     <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
@@ -2831,22 +2851,15 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
             const [loading, setLoading] = useState(true);
             const [selectedStudentId, setSelectedStudentId] = useState(null);
 
-            // Load all scores from Firestore
+            // Real-time listener: auto-updates when students submit scores
             useEffect(() => {
                 setLoading(true);
-                loadAllScores(selectedClass).then(data => {
+                const unsubscribe = listenAllScores(selectedClass, (data) => {
                     setAllScores(data);
                     setLoading(false);
                 });
+                return () => unsubscribe();
             }, [selectedClass]);
-
-            const handleRefresh = () => {
-                setLoading(true);
-                loadAllScores(selectedClass).then(data => {
-                    setAllScores(data);
-                    setLoading(false);
-                });
-            };
 
             // Build student list with scores
             const studentList = Object.entries(allScores).map(([uid, data]) => {
@@ -2944,9 +2957,9 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                         <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="border border-gray-300 rounded-lg px-4 py-2 font-medium">
                             {Object.keys(CLASSES).map(cls => <option key={cls} value={cls}>{cls}</option>)}
                         </select>
-                        <button onClick={handleRefresh} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">
-                            🔄 重新整理
-                        </button>
+                        <span className="px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-200">
+                            🟢 即時同步中
+                        </span>
                         <button onClick={handleExcel} disabled={studentList.length === 0} className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 disabled:opacity-50">
                             匯出 Excel
                         </button>
@@ -3008,10 +3021,11 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
 
             useEffect(() => {
                 setLoading(true);
-                loadAllScores(selectedClass).then(data => {
+                const unsubscribe = listenAllScores(selectedClass, (data) => {
                     setAllScores(data);
                     setLoading(false);
                 });
+                return () => unsubscribe();
             }, [selectedClass]);
 
             // Calculate class average per week from real Firestore data
