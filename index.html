@@ -1387,7 +1387,7 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                         <h3 className="font-bold text-gray-900 mb-4">🎧 Podcast 完整音檔</h3>
                         <audio
                             controls
-                            src={`audio/W${weekId}/W${weekId}_full.m4a`}
+                            src={`W${weekId}/W${weekId}_full.m4a`}
                             className="w-full"
                             style={{borderRadius: '8px'}}
                         />
@@ -1543,7 +1543,7 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
         // ElevenLabs audio data (base64-encoded mp3) — loaded below
         // Audio file paths — mp3 files in audio/W{weekId}/W{weekId}_S{num}.mp3
         function getSentenceAudioSrc(weekId, sentenceNum) {
-            return `audio/W${weekId}/W${weekId}_S${sentenceNum}.mp3`;
+            return `W${weekId}/W${weekId}_S${sentenceNum}.mp3`;
         }
 
 
