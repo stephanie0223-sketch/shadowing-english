@@ -2296,23 +2296,23 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                 '</div>' +
             '</div>';
 
-            // Create a temporary container
+            // Create a temporary container (visible but off-screen so html2canvas can render it)
             const container = document.createElement('div');
             container.innerHTML = htmlContent;
-            container.style.position = 'absolute';
+            container.style.position = 'fixed';
             container.style.left = '0';
             container.style.top = '0';
             container.style.width = '720px';
-            container.style.zIndex = '-1';
-            container.style.opacity = '0';
-            container.style.pointerEvents = 'none';
+            container.style.background = '#ffffff';
+            container.style.zIndex = '99999';
+            container.style.overflow = 'hidden';
             document.body.appendChild(container);
 
             html2pdf().set({
                 margin: [10, 10, 10, 10],
                 filename: 'Shadowing_Week' + weekId + '_' + studentName + '.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false, width: 720 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             }).from(container).save().then(() => {
                 document.body.removeChild(container);
