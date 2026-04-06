@@ -1872,9 +1872,6 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                                         <p className="text-lg font-bold text-pink-600">{sc.prosody}</p>
                                     </div>
                                 </div>
-                                <div className="text-center mb-3">
-                                    <p className="text-xs text-gray-400">流暢度（參考）：<span className="font-semibold text-purple-600">{sc.fluency}</span>/100</p>
-                                </div>
 
                                 {/* Word-by-word breakdown */}
                                 {sc.words && sc.words.length > 0 && (
@@ -1915,64 +1912,91 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                                             <p className="text-xs text-green-700 mb-1">🌟 太棒了！語調非常自然，跟母語者很接近！</p>
                                             <ul className="text-xs text-green-800 ml-3 space-y-0.5 list-disc">
                                                 {currentSentence.vocab && <li>「{currentSentence.vocab}」的節奏和連音處理得很好</li>}
-                                                {sc.fluency >= 85 && <li>語速流暢自然，沒有不必要的停頓</li>}
+                                                <li>語速流暢自然，節奏掌握得很好</li>
                                                 {currentSentence.text.includes('?') && <li>問句的語調上揚掌握得很好 ↗</li>}
                                                 {currentSentence.text.includes('!') && <li>感嘆語氣很到位，情緒表達自然</li>}
                                             </ul>
                                         </>
                                     )}
-                                    {sc.prosody >= 80 && sc.prosody < 90 && (
+                                    {sc.prosody >= 80 && sc.prosody < 90 && (() => {
+                                        const words = currentSentence.text.split(/\s+/);
+                                        const contentWordsList = words.filter(w => w.replace(/[^a-zA-Z']/g, '').length > 3);
+                                        const stressWords = contentWordsList.slice(0, 3).map(w => w.replace(/[^a-zA-Z']/g, '')).join('、');
+                                        return (
                                         <>
                                             <p className="text-xs text-green-700 mb-1">語調不錯！再注意以下細節會更道地：</p>
                                             <ul className="text-xs text-green-800 ml-3 space-y-0.5 list-disc">
                                                 {currentSentence.vocab && <li>關鍵片語「{currentSentence.vocab}」試著更自然地連在一起說，像一個詞組</li>}
                                                 {currentSentence.text.includes('?') && <li>問句句尾的上揚 ↗ 可以再明顯一點</li>}
                                                 {currentSentence.text.includes('!') && <li>感嘆的語氣可以再誇張一點，讓情緒更到位</li>}
-                                                {currentSentence.text.includes(',') && <li>逗號處的停頓可以更自然，不要太短也不要太長</li>}
-                                                {sc.words && sc.words.length > 0 && (() => {
-                                                    const contentWords = sc.words.filter(w => w.word.length > 3 && w.accuracyScore < 95);
-                                                    return contentWords.length > 0 ? <li>重點字「{contentWords.slice(0, 3).map(w => w.word).join('、')}」可以再強調一些，讓重音更明顯</li> : null;
-                                                })()}
-                                                {currentSentence.tip && <li>老師提示：{currentSentence.tip.substring(0, 60)}...</li>}
+                                                {stressWords && <li>練習方式：先只唸重點字「{stressWords}」，加強語氣後再把整句唸完</li>}
+                                                {currentSentence.tip && <li>老師提示：{currentSentence.tip}</li>}
                                             </ul>
-                                        </>
-                                    )}
-                                    {sc.prosody >= 70 && sc.prosody < 80 && (
+                                        </>);
+                                    })()}
+                                    {sc.prosody >= 70 && sc.prosody < 80 && (() => {
+                                        const words = currentSentence.text.split(/\s+/);
+                                        const contentWordsList = words.filter(w => w.replace(/[^a-zA-Z']/g, '').length > 3);
+                                        const stressWords = contentWordsList.slice(0, 3).map(w => w.replace(/[^a-zA-Z']/g, '')).join('、');
+                                        const commaIdx = currentSentence.text.indexOf(',');
+                                        const hasTwoParts = commaIdx > 0;
+                                        const part1 = hasTwoParts ? currentSentence.text.substring(0, commaIdx).trim() : '';
+                                        const part2 = hasTwoParts ? currentSentence.text.substring(commaIdx + 1).trim() : '';
+                                        return (
                                         <>
-                                            <p className="text-xs text-amber-700 mb-1">語調還行，但可以更有感情。試試看這些重點：</p>
+                                            <p className="text-xs text-amber-700 mb-1">語調還行，但可以更有感情。針對這句的練習建議：</p>
                                             <ul className="text-xs text-amber-800 ml-3 space-y-0.5 list-disc">
-                                                {currentSentence.text.includes('?') && <li>這是疑問句，句尾要上揚 ↗</li>}
-                                                {currentSentence.text.includes('!') && <li>這句有感嘆語氣，重點字要加強力度</li>}
-                                                {currentSentence.vocab && <li>關鍵片語「{currentSentence.vocab}」要唸得更有節奏感</li>}
-                                                <li>回去聽示範音檔，注意哪些字被「強調」、哪些字輕輕帶過</li>
+                                                {currentSentence.text.includes('?') && <li>這是疑問句，試著把最後兩個字的音調拉高 ↗，像真的在問問題</li>}
+                                                {currentSentence.text.includes('!') && <li>這句有感嘆語氣，想像你真的很驚訝/興奮，把情緒放進去</li>}
+                                                {currentSentence.vocab && <li>「{currentSentence.vocab}」是這句的靈魂，要像一個整體唸出來，中間不要斷開</li>}
+                                                {hasTwoParts && <li>練習方式：先唸前半「{part1}」停一拍，再唸「{part2}」，感受節奏</li>}
+                                                {stressWords && <li>重點字「{stressWords}」要比其他字大聲、慢一點，其他字輕輕帶過</li>}
+                                                <li>先按「播放」聽示範音檔 2~3 次，注意哪些字被強調，再錄音</li>
+                                                {currentSentence.tip && <li>老師提示：{currentSentence.tip}</li>}
                                             </ul>
-                                        </>
-                                    )}
-                                    {sc.prosody >= 50 && sc.prosody < 70 && (
+                                        </>);
+                                    })()}
+                                    {sc.prosody >= 50 && sc.prosody < 70 && (() => {
+                                        const words = currentSentence.text.split(/\s+/);
+                                        const funcWords = ['a', 'an', 'the', 'of', 'to', 'in', 'on', 'at', 'is', 'am', 'are', 'was', 'it', 'I'];
+                                        const contentWordsList = words.filter(w => !funcWords.includes(w.replace(/[^a-zA-Z']/g, '').toLowerCase()) && w.replace(/[^a-zA-Z']/g, '').length > 2);
+                                        const stressWords = contentWordsList.slice(0, 4).map(w => w.replace(/[^a-zA-Z']/g, '')).join('、');
+                                        return (
                                         <>
-                                            <p className="text-xs text-amber-700 mb-1">語調偏平，像在「唸課文」而不是「說話」。試試看：</p>
+                                            <p className="text-xs text-amber-700 mb-1">語調偏平，像在「唸課文」而不是「說話」。具體練習步驟：</p>
                                             <ul className="text-xs text-amber-800 ml-3 space-y-0.5 list-disc">
-                                                <li>不要每個字都用一樣的力度，重要的字（名詞、動詞）要說大聲一點</li>
-                                                <li>句子中間有自然的「停頓點」，不要一口氣唸完</li>
-                                                {currentSentence.text.includes('?') && <li>這是問句，最後要有上揚的感覺 ↗</li>}
-                                                {currentSentence.text.includes('!') && <li>這句有驚嘆的語氣，嘗試把情緒放進去</li>}
-                                                {currentSentence.vocab && <li>把「{currentSentence.vocab}」當作這句的重點，用力強調它</li>}
-                                                {currentSentence.tip && <li>老師提示：{currentSentence.tip.substring(0, 60)}...</li>}
+                                                <li>Step 1：先聽示範音檔，用手指跟著節奏點桌子，感受「強弱強弱」的律動</li>
+                                                {stressWords && <li>Step 2：這句的重點字是「{stressWords}」，先只大聲唸這幾個字</li>}
+                                                <li>Step 3：再把整句唸出來，重點字大聲+慢，其他字小聲+快</li>
+                                                {currentSentence.text.includes('?') && <li>注意：這是問句，最後語調要像溜滑梯往上 ↗</li>}
+                                                {currentSentence.text.includes('!') && <li>注意：這句要有感情，想像你是在跟朋友說話，不是在考試</li>}
+                                                {currentSentence.vocab && <li>片語「{currentSentence.vocab}」要當一個字唸，三個字之間不要停頓</li>}
+                                                {currentSentence.tip && <li>老師提示：{currentSentence.tip}</li>}
                                             </ul>
-                                        </>
-                                    )}
-                                    {sc.prosody < 50 && (
+                                        </>);
+                                    })()}
+                                    {sc.prosody < 50 && (() => {
+                                        const words = currentSentence.text.split(/\s+/);
+                                        const funcWords = ['a', 'an', 'the', 'of', 'to', 'in', 'on', 'at', 'is', 'am', 'are', 'was', 'it', 'I'];
+                                        const contentWordsList = words.filter(w => !funcWords.includes(w.replace(/[^a-zA-Z']/g, '').toLowerCase()) && w.replace(/[^a-zA-Z']/g, '').length > 2);
+                                        const stressWords = contentWordsList.map(w => w.replace(/[^a-zA-Z']/g, ''));
+                                        const stressPattern = words.map(w => {
+                                            const clean = w.replace(/[^a-zA-Z']/g, '');
+                                            return funcWords.includes(clean.toLowerCase()) || clean.length <= 2 ? 'da' : 'DA';
+                                        }).join(' ');
+                                        return (
                                         <>
-                                            <p className="text-xs text-red-700 mb-1">語調需要大幅改善，聽起來太平了。建議：</p>
+                                            <p className="text-xs text-red-700 mb-1">語調需要大幅改善，聽起來太平了。請跟著以下步驟練習：</p>
                                             <ul className="text-xs text-red-800 ml-3 space-y-0.5 list-disc">
-                                                <li>先多聽幾次示範音檔，專注聽「哪裡高、哪裡低、哪裡停」</li>
-                                                <li>試著「模仿表演」而不只是「讀字」—— 想像自己就是那個角色在說話</li>
-                                                <li>內容字（名詞/動詞/形容詞）要重讀，功能字（a/the/of/to）要輕讀</li>
-                                                {currentSentence.text.includes(',') && <li>逗號的地方要稍微停頓，不要連在一起唸</li>}
-                                                {currentSentence.tip && <li>老師提示：{currentSentence.tip.substring(0, 80)}...</li>}
+                                                <li>Step 1：先聽示範音檔 3 次，不要跟讀，專心聽「哪裡高、哪裡低、哪裡停」</li>
+                                                <li>Step 2：用「DA da」節奏唸這句：{stressPattern}</li>
+                                                {stressWords.length > 0 && <li>Step 3：大聲唸出重點字「{stressWords.slice(0, 4).join('、')}」，其他字小聲帶過</li>}
+                                                <li>Step 4：想像自己就是對話中的角色，用「演」的方式說這句話</li>
+                                                {currentSentence.text.includes(',') && <li>逗號的地方停一拍再繼續，不要一口氣唸完</li>}
+                                                {currentSentence.tip && <li>老師提示：{currentSentence.tip}</li>}
                                             </ul>
-                                        </>
-                                    )}
+                                        </>);
+                                    })()}
                                 </div>
 
                                 {/* Pronunciation specific feedback */}
@@ -1996,9 +2020,6 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                                         )}
                                         {weakWords.some(w => w.errorType === 'Omission') && (
                                             <p className="text-xs text-gray-600 mt-1">💬 有些字被漏掉了，試著把每個字都清楚唸出來，速度可以慢一點沒關係</p>
-                                        )}
-                                        {sc.fluency < 70 && (
-                                            <p className="text-xs text-gray-600 mt-1">💬 語速不太穩定，有些地方太快或停頓太久，試著保持均勻的節奏</p>
                                         )}
                                     </div>
                                 )}
@@ -2111,11 +2132,6 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                                         </div>
                                     </div>
                                 ))}
-                                {recordingScore.fluency !== undefined && (
-                                    <div className="mt-2 pt-2 border-t border-gray-100 text-sm">
-                                        <div className="flex justify-between"><span className="text-gray-500">流暢度（參考）</span><span className="font-semibold">{recordingScore.fluency}/100</span></div>
-                                    </div>
-                                )}
                                 <div className="mt-4 pt-4 border-t border-gray-200">
                                     <div className="flex justify-between items-center">
                                         <span className="font-bold text-gray-900">總分</span>
@@ -2246,7 +2262,7 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                     '</tr>' + (weakStr ? '<tr><td colspan="6">' + weakStr + '</td></tr>' : '');
             });
 
-            const htmlContent = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:24px;max-width:720px;margin:0 auto;">' +
+            const htmlContent = '<div style="font-family:Microsoft JhengHei,PingFang TC,Segoe UI,Roboto,sans-serif;padding:24px;max-width:720px;margin:0 auto;color:#1f2937;">' +
                 '<div style="text-align:center;margin-bottom:20px;">' +
                     '<h1 style="color:#2563eb;font-size:22px;margin:0;">Shadowing English</h1>' +
                     '<p style="color:#6b7280;font-size:12px;margin:4px 0 0;">Pronunciation Assessment Report</p>' +
@@ -2260,7 +2276,7 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                 '<div style="background:#eff6ff;border-radius:8px;padding:16px;text-align:center;margin-bottom:20px;">' +
                     '<div style="font-size:28px;font-weight:bold;color:' + scoreColor + ';">Total Score: ' + totalScore + ' / 100</div>' +
                     '<div style="font-size:11px;color:#6b7280;margin-top:6px;">' +
-                        'Accuracy(30%): ' + avgAccuracy + '　|　Completeness(30%): ' + avgCompleteness + '　|　Prosody(40%): ' + avgProsody + '　|　Fluency(ref): ' + avgFluency +
+                        'Accuracy(30%): ' + avgAccuracy + '　|　Completeness(30%): ' + avgCompleteness + '　|　Prosody(40%): ' + avgProsody +
                     '</div>' +
                 '</div>' +
                 '<h3 style="font-size:14px;color:#1f2937;margin-bottom:8px;">Per-Sentence Breakdown</h3>' +
@@ -2283,15 +2299,20 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
             // Create a temporary container
             const container = document.createElement('div');
             container.innerHTML = htmlContent;
-            container.style.position = 'fixed';
-            container.style.left = '-9999px';
+            container.style.position = 'absolute';
+            container.style.left = '0';
+            container.style.top = '0';
+            container.style.width = '720px';
+            container.style.zIndex = '-1';
+            container.style.opacity = '0';
+            container.style.pointerEvents = 'none';
             document.body.appendChild(container);
 
             html2pdf().set({
                 margin: [10, 10, 10, 10],
                 filename: 'Shadowing_Week' + weekId + '_' + studentName + '.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, logging: false, width: 720 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             }).from(container).save().then(() => {
                 document.body.removeChild(container);
@@ -2882,12 +2903,12 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
             });
 
             const handleExcel = () => {
-                const ws_data = [['班級', selectedClass], [], ['學生', '週次', '準確度', '流暢度', '語調', '完整度', '總分', '完成句數']];
+                const ws_data = [['班級', selectedClass], [], ['學生', '週次', '準確度', '語調', '完整度', '總分', '完成句數']];
                 studentList.forEach(student => {
                     Object.entries(student.weekTotals).forEach(([weekId, wt]) => {
                         ws_data.push([
                             student.name, `W${weekId}`,
-                            wt.accuracy, wt.fluency, wt.prosody, wt.completeness, wt.total, wt.sentenceCount
+                            wt.accuracy, wt.prosody, wt.completeness, wt.total, wt.sentenceCount
                         ]);
                     });
                 });
@@ -2918,7 +2939,6 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                                     <div className="grid grid-cols-4 gap-3 mb-4">
                                         {[
                                             { label: '準確度', value: wt.accuracy, color: 'text-blue-600' },
-                                            { label: '流暢度', value: wt.fluency, color: 'text-purple-600' },
                                             { label: '語調', value: wt.prosody, color: 'text-pink-600' },
                                             { label: '完整度', value: wt.completeness, color: 'text-green-600' },
                                         ].map(item => (
