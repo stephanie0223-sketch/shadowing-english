@@ -2222,11 +2222,14 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
 
         function generateScorePDF(studentName, className, weekId, weekTitle, weekData) {
             try {
+            console.log('PDF_DEBUG: called with', {studentName, className, weekId, weekTitle});
+            console.log('PDF_DEBUG: weekData', JSON.stringify(weekData).substring(0, 500));
             if (!window.html2pdf) {
                 alert('PDF 元件尚未載入，請稍候再試一次。');
                 return;
             }
             const sentenceEntries = Object.entries(weekData).sort(([a], [b]) => Number(a) - Number(b));
+            console.log('PDF_DEBUG: sentenceEntries count', sentenceEntries.length);
             if (sentenceEntries.length === 0) {
                 alert('這週還沒有成績資料，請先完成跟讀練習。');
                 return;
@@ -2314,8 +2317,12 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, logging: false },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(container).toPdf().get('pdf').then((pdf) => {
+                console.log('PDF_DEBUG: pages', pdf.internal.getNumberOfPages());
+                console.log('PDF_DEBUG: container offsetHeight', container.offsetHeight, 'innerHTML length', container.innerHTML.length);
             }).from(container).save().then(() => {
                 document.body.removeChild(container);
+                console.log('PDF_DEBUG: save complete');
             }).catch(err => {
                 document.body.removeChild(container);
                 console.error('PDF generation error:', err);
