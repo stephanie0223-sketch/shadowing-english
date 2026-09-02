@@ -41,39 +41,6 @@
         const db = firebase.firestore();
         const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-        // ==================== ONE-TIME MIGRATION: 電機一忠 → 電機二忠 ====================
-        // TODO: Remove this after running once
-        async function migrateClassName() {
-            const OLD_NAME = '電機一忠';
-            const NEW_NAME = '電機二忠';
-            const migrationDoc = await db.collection('settings').doc('migration_class_rename').get();
-            if (migrationDoc.exists) return; // already migrated
-
-            console.log('Running class rename migration...');
-            let count = 0;
-
-            // Migrate studentBindings
-            const bindings = await db.collection('studentBindings').where('className', '==', OLD_NAME).get();
-            for (const doc of bindings.docs) {
-                await doc.ref.update({ className: NEW_NAME });
-                count++;
-            }
-
-            // Migrate scores
-            const scores = await db.collection('scores').where('className', '==', OLD_NAME).get();
-            for (const doc of scores.docs) {
-                await doc.ref.update({ className: NEW_NAME });
-                count++;
-            }
-
-            // Mark migration as done
-            await db.collection('settings').doc('migration_class_rename').set({
-                from: OLD_NAME, to: NEW_NAME, migratedAt: new Date().toISOString(), docsUpdated: count
-            });
-            console.log(`Migration complete: ${count} docs updated (${OLD_NAME} → ${NEW_NAME})`);
-        }
-        migrateClassName().catch(err => console.error('Migration error:', err));
-
         // ==================== FIRESTORE HELPERS ====================
         // Week lock settings (stored in Firestore, controlled by teacher)
         async function loadWeekSettings() {
