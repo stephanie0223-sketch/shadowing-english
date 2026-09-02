@@ -41,6 +41,39 @@
         const db = firebase.firestore();
         const googleProvider = new firebase.auth.GoogleAuthProvider();
 
+        // ==================== ONE-TIME MIGRATION: 電機一忠 → 電機二忠 ====================
+        // TODO: Remove this after running once
+        async function migrateClassName() {
+            const OLD_NAME = '電機一忠';
+            const NEW_NAME = '電機二忠';
+            const migrationDoc = await db.collection('settings').doc('migration_class_rename').get();
+            if (migrationDoc.exists) return; // already migrated
+
+            console.log('Running class rename migration...');
+            let count = 0;
+
+            // Migrate studentBindings
+            const bindings = await db.collection('studentBindings').where('className', '==', OLD_NAME).get();
+            for (const doc of bindings.docs) {
+                await doc.ref.update({ className: NEW_NAME });
+                count++;
+            }
+
+            // Migrate scores
+            const scores = await db.collection('scores').where('className', '==', OLD_NAME).get();
+            for (const doc of scores.docs) {
+                await doc.ref.update({ className: NEW_NAME });
+                count++;
+            }
+
+            // Mark migration as done
+            await db.collection('settings').doc('migration_class_rename').set({
+                from: OLD_NAME, to: NEW_NAME, migratedAt: new Date().toISOString(), docsUpdated: count
+            });
+            console.log(`Migration complete: ${count} docs updated (${OLD_NAME} → ${NEW_NAME})`);
+        }
+        migrateClassName().catch(err => console.error('Migration error:', err));
+
         // ==================== FIRESTORE HELPERS ====================
         // Week lock settings (stored in Firestore, controlled by teacher)
         async function loadWeekSettings() {
@@ -281,7 +314,7 @@
 
         // ==================== DATA ====================
         const CLASSES = {
-            '電機一忠': [
+            '電機二忠': [
                 { id: 1, name: '王正緯' }, { id: 2, name: '王浩棠' }, { id: 3, name: '吳承叡' },
                 { id: 4, name: '林延平' }, { id: 5, name: '林玟瑛' }, { id: 6, name: '柯奕安' },
                 { id: 7, name: '洪子杰' }, { id: 8, name: '洪翊銨' }, { id: 9, name: '紀承廷' },
@@ -295,7 +328,10 @@
                 { id: 31, name: '鄒瑞恩' }, { id: 32, name: '劉子睿' }, { id: 33, name: '劉育丞' },
                 { id: 34, name: '劉冠辰' }, { id: 35, name: '鄭松庭' }, { id: 36, name: '羅英榤' }
             ],
-            '電子適性分組': Array.from({ length: 20 }, (_, i) => ({ id: i + 1, name: `學生${String(i + 1).padStart(2, '0')}` }))
+            '電機適性分組': [
+                ...Array.from({ length: 20 }, (_, i) => ({ id: i + 1, name: `學生${String(i + 1).padStart(2, '0')}` })),
+                { id: 21, name: '老師測試' }
+            ]
         };
 
         // ╔══════════════════════════════════════════════════════════════╗
@@ -3098,7 +3134,7 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
 
         function TeacherPortal({ onLogout, unlockedWeeks, setUnlockedWeeks }) {
             const [activeTab, setActiveTab] = useState('status');
-            const [selectedClass, setSelectedClass] = useState('電機一忠');
+            const [selectedClass, setSelectedClass] = useState('電機二忠');
 
             return (
                 <div className="min-h-screen bg-gray-50 teacher">
