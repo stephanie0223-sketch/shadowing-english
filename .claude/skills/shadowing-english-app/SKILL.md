@@ -119,8 +119,7 @@ shadowing-english/
 │   ├── W10/                   # W10 起另含 W{N}_full.mp3（ElevenLabs 完整 podcast）
 │   └── week 1/ ... week 9/    # NotebookLM 時期原始檔備份（m4a + transcript docx）
 ├── W1/ ... W9/                # 舊路徑：W{N}_full.m4a（NotebookLM podcast，app 仍引用）
-├── audio_generator.html       # （legacy）瀏覽器端批量音檔工具
-├── generate_audio.py          # （legacy）W1-W9 單聲音生成腳本
+├── archive/                   # 封存區（gitignore）：NotebookLM docx、舊原型、legacy 工具
 └── .claude/skills/shadowing-english-app/   # 本 skill（隨 repo 版控）
 ```
 
@@ -267,13 +266,9 @@ const CLASSES = {
 
 已定案的 27 週主題規劃見 `references/current-weeks.md`。
 
-### 生成音檔（legacy 工具，W10 起改用上方自動化流程）
+### Legacy 音檔工具
 
-**方法一：瀏覽器工具 `audio_generator.html`**（W1-W9 時期）
-- 必須從 https:// 提供（CORS 限制，不能用 file://）
-
-**方法二：Python 腳本 `generate_audio.py`**（W1-W9 時期，單聲音）
-- 自動跳過已存在且 >1KB 的檔案
+W1-W9 時期的 `audio_generator.html`（瀏覽器批量工具）和 `generate_audio.py`（單聲音腳本）已移至 `archive/`，不再使用。
 
 **ElevenLabs 音檔 voice_settings:**
 ```json
