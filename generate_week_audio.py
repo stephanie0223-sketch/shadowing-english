@@ -90,6 +90,24 @@ def file_ok(path):
     return os.path.exists(path) and os.path.getsize(path) > 1000
 
 
+def normalize_loudness(path):
+    """統一響度到 -16 LUFS，消除不同 voice 的音量/距離感差異"""
+    try:
+        import imageio_ffmpeg, subprocess
+        ff = imageio_ffmpeg.get_ffmpeg_exe()
+        tmp = path + '.norm.mp3'
+        r = subprocess.run([ff, '-y', '-i', path, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-b:a', '160k', tmp],
+                           capture_output=True, text=True)
+        if r.returncode == 0 and os.path.getsize(tmp) > 1000:
+            os.replace(tmp, path)
+            return True
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    except Exception as e:
+        print(f"  ⚠️ 響度標準化失敗（保留原檔）: {e}")
+    return False
+
+
 def tts_line(text, voice_id, output_path):
     """單句 TTS (eleven_turbo_v2)"""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -102,6 +120,7 @@ def tts_line(text, voice_id, output_path):
     if r.status_code == 200 and len(r.content) > 1000:
         with open(output_path, 'wb') as f:
             f.write(r.content)
+        normalize_loudness(output_path)
         return True
     print(f"  ❌ {r.status_code}: {r.text[:150]}")
     return False
@@ -121,6 +140,7 @@ def try_text_to_dialogue(output_path):
     if r.status_code == 200 and len(r.content) > 10000:
         with open(output_path, 'wb') as f:
             f.write(r.content)
+        normalize_loudness(output_path)
         print(f"  ✅ 完整 podcast 完成 ({len(r.content)/1024:.0f} KB)")
         return True
     print(f"  ⚠️ Text-to-Dialogue 不可用 ({r.status_code}): {r.text[:200]}")

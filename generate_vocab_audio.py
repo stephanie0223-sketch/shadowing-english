@@ -52,6 +52,23 @@ def clean_for_tts(phrase):
     return t
 
 
+def normalize_loudness(path):
+    try:
+        import imageio_ffmpeg, subprocess
+        ff = imageio_ffmpeg.get_ffmpeg_exe()
+        tmp = path + '.norm.mp3'
+        r = subprocess.run([ff, '-y', '-i', path, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-b:a', '160k', tmp],
+                           capture_output=True, text=True)
+        if r.returncode == 0 and os.path.getsize(tmp) > 1000:
+            os.replace(tmp, path)
+            return True
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    except Exception:
+        pass
+    return False
+
+
 def generate(text, output_path):
     data = {
         "text": text,
@@ -66,6 +83,7 @@ def generate(text, output_path):
     if r.status_code == 200 and len(r.content) > 1000:
         with open(output_path, 'wb') as f:
             f.write(r.content)
+        normalize_loudness(output_path)
         return True
     print(f"  ❌ {r.status_code}: {r.text[:120]}")
     return False
