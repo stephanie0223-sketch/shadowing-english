@@ -3248,6 +3248,7 @@ Leo: Deal. Next time it's on me!`,
         // ==================== MAIN APP ====================
         function App() {
             const [user, setUser] = useState(null);
+            const [restoring, setRestoring] = useState(true); // true while checking saved session
             const [unlockedWeeks, setUnlockedWeeks] = useState([1, 2, 3]); // default: first 3 weeks open
 
             // Load week settings from Firestore on mount
@@ -3259,17 +3260,65 @@ Leo: Deal. Next time it's on me!`,
                 });
             }, []);
 
+            // Restore session on page load (refresh keeps you logged in)
+            useEffect(() => {
+                // Teacher session persisted in localStorage
+                try {
+                    if (localStorage.getItem('teacherLoggedIn') === 'yes') {
+                        setUser({ role: 'teacher' });
+                        setRestoring(false);
+                        return;
+                    }
+                } catch (e) {}
+                // Student session restored from Firebase Auth
+                const unsub = auth.onAuthStateChanged(async (fbUser) => {
+                    if (fbUser) {
+                        try {
+                            const bindDoc = await db.collection('studentBindings').doc(fbUser.uid).get();
+                            if (bindDoc.exists) {
+                                const binding = bindDoc.data();
+                                setUser({
+                                    role: 'student',
+                                    class: binding.className,
+                                    studentId: binding.studentId,
+                                    studentName: binding.studentName,
+                                    email: fbUser.email,
+                                    uid: fbUser.uid,
+                                    photoURL: fbUser.photoURL
+                                });
+                            }
+                        } catch (e) {
+                            console.error('Session restore failed:', e);
+                        }
+                    }
+                    setRestoring(false);
+                });
+                return () => unsub();
+            }, []);
+
             // Helper: check if a week is locked
             const isWeekLocked = (weekId) => !unlockedWeeks.includes(weekId);
 
             const handleLogin = (loginData) => {
+                if (loginData.role === 'teacher') {
+                    try { localStorage.setItem('teacherLoggedIn', 'yes'); } catch (e) {}
+                }
                 setUser(loginData);
             };
 
             const handleLogout = () => {
+                try { localStorage.removeItem('teacherLoggedIn'); } catch (e) {}
                 auth.signOut().catch(() => {});
                 setUser(null);
             };
+
+            if (restoring) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                        <p className="text-gray-500 animate-pulse">🔄 載入中...</p>
+                    </div>
+                );
+            }
 
             if (!user) {
                 return <LoginScreen onLogin={handleLogin} />;
