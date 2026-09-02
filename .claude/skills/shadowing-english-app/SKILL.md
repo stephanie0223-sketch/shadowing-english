@@ -89,8 +89,9 @@ const AZURE_SPEECH_REGION = 'eastasia';
 
 ```
 API_KEY: sk_558bbc35f1541d293966060323f25427ddb5086498d69e57
-男聲 (Leo):  l4Coq6695JDX9xtLqXDE
+男聲 (Leo):  TxGEqnHWrfWFTfGW9XjX  (Josh 內建聲，年輕美式；原 l4Coq669 其實是女聲已棄用)
 女聲 (Mia):  DODLEQrClDo8wCz460ld
+字彙發音:    DODLEQrClDo8wCz460ld  (generate_vocab_audio.py, 輸出 W{N}_V{id}.mp3)
 跟讀單句 Model: eleven_turbo_v2
 完整 podcast Model: eleven_v3 (Text-to-Dialogue API, /v1/text-to-dialogue)
 ```
