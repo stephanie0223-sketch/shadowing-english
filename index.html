@@ -1028,6 +1028,73 @@ Speaker B: Well, our tools learn what we like fast. What if AI manages our habit
                     { speaker: 'Speaker A', text: "You know, you got to track your screen time daily.", vocab: 'screen time', tag: '🔵 關鍵片語 + 🎵 建議語氣', tip: '"screen time" 兩字重音。"got to" 縮成 "gotta"。語氣堅定像在給實用建議' },
                 ],
             },
+            // ──────── Week 10: Ordering at a Café ────────
+            10: {
+                title: 'Ordering at a Café',
+                vocabulary: [
+                    { id: 1, phrase: 'grab a coffee', ipa: '/ɡræb ə ˈkɔːfi/', zh: '去買杯咖啡', example: "Let's grab a coffee after class." },
+                    { id: 2, phrase: 'my usual', ipa: '/maɪ ˈjuːʒuəl/', zh: '我的老樣子（常點的）', example: "I'll just get my usual — an iced latte." },
+                    { id: 3, phrase: 'half sugar, less ice', ipa: '/hæf ˈʃʊɡər lɛs aɪs/', zh: '半糖少冰', example: 'A green tea, half sugar, less ice, please.' },
+                    { id: 4, phrase: 'make it a double', ipa: '/meɪk ɪt ə ˈdʌbl̩/', zh: '改成雙份濃縮', example: "I'm so tired — make it a double." },
+                    { id: 5, phrase: 'dairy-free', ipa: '/ˈdɛri friː/', zh: '無乳製品的', example: 'Do you have any dairy-free options like oat milk?' },
+                    { id: 6, phrase: 'on the side', ipa: '/ɑːn ðə saɪd/', zh: '（醬料）放旁邊、另外裝', example: 'Can I get the syrup on the side?' },
+                    { id: 7, phrase: 'for here or to go', ipa: '/fɔːr hɪr ɔːr tə ɡoʊ/', zh: '內用還是外帶', example: 'Is that for here or to go?' },
+                    { id: 8, phrase: "I'll have...", ipa: '/aɪl hæv/', zh: '我要點…（直述點餐）', example: "I'll have a small hot Americano." },
+                    { id: 9, phrase: 'Can I have...?', ipa: '/kæn aɪ hæv/', zh: '請給我…（問句點餐）', example: 'Can I have a medium matcha latte?' },
+                    { id: 10, phrase: 'What do you recommend?', ipa: '/wʌt duː juː ˌrɛkəˈmɛnd/', zh: '你推薦什麼？', example: "It's my first time here. What do you recommend?" },
+                    { id: 11, phrase: 'signature drink', ipa: '/ˈsɪɡnətʃər drɪŋk/', zh: '招牌飲料', example: 'The honey latte is their signature drink.' },
+                    { id: 12, phrase: 'treat someone', ipa: '/triːt ˈsʌmwʌn/', zh: '請客', example: "Put your wallet away — let me treat you. It's on me!" },
+                ],
+                dialogue: `Mia: Finally! I've been dying to grab a coffee all day.
+Leo: Honestly, I never come to cafés. The menu scares me.
+Mia: Wait, seriously? Okay, don't worry. I've got you.
+Leo: There are like fifty drinks up there. Fifty!
+Mia: Ha! I just get my usual. A large iced matcha latte.
+Leo: Your usual? Wow, you sound like a regular.
+Mia: I'm here every day. And I always say half sugar, less ice.
+Leo: Whoa, you can change all that stuff?
+Mia: Sure! Sugar level, ice, size. Whatever you want.
+Leo: Cool. So, what do you recommend? What's the signature drink here?
+Mia: The honey latte. It's the house special. But it's pretty sweet.
+Leo: Hmm, no thanks. I need something super strong. I stayed up late gaming.
+Mia: Then go for an Americano. Hot or iced?
+Leo: Iced, for sure. It's so hot today.
+Mia: You can make it a double. Two espresso shots.
+Leo: Perfect. But hmm, maybe milk would be nice.
+Mia: Then get a latte instead. It's coffee plus milk.
+Leo: But milk makes my stomach hurt a little.
+Mia: No problem. Just ask for a dairy-free option, like oat milk.
+Leo: Oh, they can do that? That's actually great.
+Mia: What about food? The chocolate cake here is amazing.
+Leo: Sure! I'm kind of hungry anyway.
+Mia: Get the sauce on the side. The cake stays crispy that way.
+Leo: You're clearly a café expert. Oh no, it's our turn!
+Mia: Watch me first. Hi! Can I have a large iced matcha latte, half sugar, less ice?
+Leo: Okay, my turn. Um... I'll have a small iced latte, no sugar, with oat milk.
+Mia: Look at you! You sound like a pro already.
+Leo: Wait, for here or to go? She's asking me.
+Mia: For here, obviously. We've got cake to eat.
+Leo: Right! For here, please.
+Mia: And put your wallet away. Let me treat you today.
+Leo: What? No way. You don't have to.
+Mia: You can treat me next time. Deal?
+Leo: Deal. Next time it's on me!`,
+                comprehensionQuestions: [
+                    { id: 1, question: "What is Mia's usual order?", options: [{ text: 'A large iced matcha latte, half sugar, less ice', correct: true }, { text: 'A honey latte with extra sugar', correct: false }, { text: 'A small hot Americano with oat milk', correct: false }], explanation: 'Mia says "I just get my usual. A large iced matcha latte" and "I always say half sugar, less ice."', correctIndex: 0 },
+                    { id: 2, question: 'Why does Leo ask for oat milk in his latte?', options: [{ text: 'He thinks oat milk tastes sweeter', correct: false }, { text: 'Regular milk makes his stomach hurt', correct: true }, { text: 'Oat milk is cheaper than regular milk', correct: false }], explanation: 'Leo says "milk makes my stomach hurt a little," so Mia suggests asking for a dairy-free option like oat milk.', correctIndex: 1 },
+                    { id: 3, question: 'Who pays for the drinks today?', options: [{ text: 'Leo, because it is his first visit', correct: false }, { text: 'They split the bill', correct: false }, { text: 'Mia treats Leo, and Leo will pay next time', correct: true }], explanation: 'Mia says "Let me treat you today," and Leo agrees with "Deal. Next time it\'s on me!"', correctIndex: 2 },
+                ],
+                keySentences: [
+                    { speaker: 'Mia', text: "Finally! I've been dying to grab a coffee all day.", vocab: 'grab a coffee', tag: '🔵 關鍵片語 + 🎵 語調', tip: '"Finally!" 誇張開場、語調下降帶滿足感。"dying to" 表示超級想要。"grab‿a" 連音' },
+                    { speaker: 'Mia', text: "I just get my usual. A large iced matcha latte.", vocab: 'my usual', tag: '🔵 關鍵片語', tip: '"get‿my usual" 輕鬆自豪的語氣。點餐斷句：large / iced / matcha latte，每個字都清楚' },
+                    { speaker: 'Mia', text: "I always say half sugar, less ice.", vocab: 'half sugar, less ice', tag: '🔵 關鍵片語 + 🎵 節奏', tip: '"half SUgar, less ICE" 對稱重音，像唸口訣一樣。台灣手搖杯必備句！' },
+                    { speaker: 'Mia', text: "Then go for an Americano. Hot or iced?", vocab: 'hot or iced', tag: '🔵 關鍵片語 + 🎵 語調', tip: '"go for‿an" 連音。"Hot ↗ or iced ↘?" 選擇疑問句：前面上揚、後面下降' },
+                    { speaker: 'Mia', text: "You can make it a double. Two espresso shots.", vocab: 'make it a double', tag: '🔵 關鍵片語', tip: '"make‿it‿a double" 三字連音黏在一起，唸快像 "may-ki-da"。double 重音在 DOU' },
+                    { speaker: 'Mia', text: "Can I have a large iced matcha latte, half sugar, less ice?", vocab: 'Can I have...?', tag: '🔵 問句點餐 + 🎵 語調', tip: '"Can‿I have‿a" 連音。問句點餐＝禮貌版。句尾微微上揚。注意客製化的節奏斷句' },
+                    { speaker: 'Leo', text: "I'll have a small iced latte, no sugar, with oat milk.", vocab: "I'll have...", tag: '🔵 直述點餐', tip: '"I\'ll" 縮讀輕唸。直述點餐＝最常用版。跟上一句比較：問句 vs 直述兩種都要會' },
+                    { speaker: 'Leo', text: "Wait, for here or to go? She's asking me.", vocab: 'for here or to go', tag: '🔵 關鍵片語 + 🎵 語調', tip: '"for here ↗ or to go ↘" 選擇疑問語調。"asking‿me" 連音。Wait 帶一點慌張感' },
+                ],
+            },
         };
         // ╔══════════════════════════════════════════════════════════════╗
         // ║  🔒 以下是程式碼 — 新增課程時不需要動這裡！                  ║
