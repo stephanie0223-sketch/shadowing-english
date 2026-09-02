@@ -255,7 +255,11 @@ const CLASSES = {
 4. **更新 `COURSE_DATA`**：新增 entry（title、vocabulary 12 個含 IPA、dialogue、comprehensionQuestions 3 題、keySentences 8 句含語調提示）
    - `WEEKS` 陣列是自動衍生的，不用手動加
 5. **Git commit + push** → GitHub Pages 自動部署
-6. **Stephanie 驗收**：用「老師測試」帳號（電機適性分組 #21，Google 帳號 stephanie0223@gmail.com 已綁定）登入試聽；新週次預設 🔒 鎖定（unlockedWeeks 存 Firestore），教師端確認後手動解鎖
+6. **（可選）產動畫影片**：更新 `generate_week_video.py` 的 `WEEK`/`TITLE`/`DIALOGUE`/`KEY_SENTENCES` 後執行 → `videos/W{N}_*.mp4`（不 commit 到 repo，直接傳給 Stephanie）
+   - 內容：品牌畫面＋頭像動畫（說話者跳動，**不顯示名字**）＋逐句字幕（比例估時）＋對話結束停 3 秒 → "Now, let's shadow..."（`assets/shadow_transition.mp3`）→ 8 句逐句播放，每句後留 10 秒練習（倒數條）
+   - **品牌色：森林綠 #5d9b76**（Stephanie 2026-09 定案，影片專用）
+   - 需要 moviepy + imageio-ffmpeg + pillow；**影片內不能用 emoji**（Arial 不支援，會變空方框）
+7. **Stephanie 驗收**：用「老師測試」帳號（電機適性分組 #21，Google 帳號 stephanie0223@gmail.com 已綁定）登入試聽；新週次預設 🔒 鎖定（unlockedWeeks 存 Firestore），教師端確認後手動解鎖
    - **提醒她強制重整**（Ctrl+Shift+R）：部署後瀏覽器常快取舊頁面/舊音檔，同檔名的音檔重新生成後尤其容易聽到舊版
 
 已定案的 27 週主題規劃見 `references/current-weeks.md`。
