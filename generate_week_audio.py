@@ -18,7 +18,7 @@ API_KEY = "sk_558bbc35f1541d293966060323f25427ddb5086498d69e57"
 
 VOICES = {
     "Mia": "DODLEQrClDo8wCz460ld",   # 女聲
-    "Leo": "l4Coq6695JDX9xtLqXDE",   # 男聲（原本跟讀用的聲音）
+    "Leo": "TxGEqnHWrfWFTfGW9XjX",   # 男聲 Josh（年輕美式，2026-09 選定）
 }
 
 VOICE_SETTINGS = {
