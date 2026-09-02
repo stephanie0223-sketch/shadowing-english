@@ -137,10 +137,14 @@ function getSentenceAudioSrc(weekId, sentenceNum) {
 - 教師密碼: `teacher2026`
 - 學生登入流程: Google Auth → 選班級 → 選姓名 → 綁定到 Firestore `studentBindings`
 - 已綁定的帳號自動跳過選擇步驟
+- **重整保持登入**: App mount 時自動恢復 session——學生走 `auth.onAuthStateChanged` + binding 查詢；教師用 localStorage `teacherLoggedIn` flag（登出時清除）。恢復期間顯示「🔄 載入中...」
 
 ### 學生端 (StudentPortal)
 
-- **VocabularyTab**: 顯示當週單字片語（IPA、中文、例句）
+- **LessonTab（本週課程）**: Podcast 完整音檔播放器（標題顯示「Week N: 主題」，有 0.75x/1x/1.25x 速度）＋ 對話內容（目標語塊藍色標示）＋ 字彙表 ＋ 理解測驗
+  - 完整 podcast 路徑：W1-W9 是 `W{N}/W{N}_full.m4a`（NotebookLM 時期），**W10+ 是 `audio/W{N}/W{N}_full.mp3`**（ElevenLabs），程式碼用 `weekId >= 10` 判斷
+  - 字彙表每個片語有 🔊 播放按鈕 → `audio/W{N}/W{N}_V{id}.mp3`
+- **週次選擇器**: 「本週課程」「跟讀練習」上方有 W1-WN 按鈕；鎖定的週次顯示 🔒 且不可點。**鎖定狀態只在頁面載入時讀取**，教師解鎖後學生要重整才看得到
 - **DialogueTab**: 完整對話文本 + 理解測驗（選擇題）
 - **PracticeTab**: 核心跟讀練習
   - 流程: ready → listening(播放音檔) → canRecord → recording(錄音) → recorded(回放) → submitted(AI評分)
@@ -152,6 +156,7 @@ function getSentenceAudioSrc(weekId, sentenceNum) {
 
 - **TeacherStatusTab**: 繳交狀態板（🟢已交/🟡遲交/⚪未交/🔒鎖定）+ 週次開放控制
 - **TeacherScoresTab**: 成績管理（即時同步 `onSnapshot`）+ Excel 匯出 + 點擊查看學生詳細逐句成績
+  - 成績表每格顯示：總分 + **三項指標小字（音=accuracy 藍／完=completeness 綠／調=prosody 粉）** + 完成句數
 - **TeacherAnalyticsTab**: 班級平均分數長條圖
 
 **即時同步**: 教師端使用 `listenAllScores()` 函式（Firestore `onSnapshot`），學生交卷時教師端自動更新，不需手動重整。
@@ -245,10 +250,12 @@ const CLASSES = {
    - 完整 podcast：Text-to-Dialogue API 雙聲一次生成 → `audio/W{N}/W{N}_full.mp3`（給 Spotify 用）
    - 8 句跟讀：逐句 TTS（依 speaker 選聲音）→ `audio/W{N}/W{N}_S1.mp3` ~ `S8.mp3`
    - 自動跳過已存在 >1KB 的檔案；失敗重跑即可
-3. **更新 `COURSE_DATA`**：新增 entry（title、vocabulary 12 個含 IPA、dialogue、comprehensionQuestions 3 題、keySentences 8 句含語調提示）
+3. **跑 `generate_vocab_audio.py`**：自動從 index.html 解析新週次的 vocabulary，生成片語發音音檔 → `audio/W{N}/W{N}_V{id}.mp3`（女聲 Mia；要先完成步驟 4 的 COURSE_DATA 才解析得到）
+4. **更新 `COURSE_DATA`**：新增 entry（title、vocabulary 12 個含 IPA、dialogue、comprehensionQuestions 3 題、keySentences 8 句含語調提示）
    - `WEEKS` 陣列是自動衍生的，不用手動加
-4. **Git commit + push** → GitHub Pages 自動部署
-5. **Stephanie 驗收**：用「老師測試」帳號（電機適性分組 #21）登入試聽；新週次預設 🔒 鎖定（unlockedWeeks 存 Firestore），教師端確認後手動解鎖
+5. **Git commit + push** → GitHub Pages 自動部署
+6. **Stephanie 驗收**：用「老師測試」帳號（電機適性分組 #21，Google 帳號 stephanie0223@gmail.com 已綁定）登入試聽；新週次預設 🔒 鎖定（unlockedWeeks 存 Firestore），教師端確認後手動解鎖
+   - **提醒她強制重整**（Ctrl+Shift+R）：部署後瀏覽器常快取舊頁面/舊音檔，同檔名的音檔重新生成後尤其容易聽到舊版
 
 已定案的 27 週主題規劃見 `references/current-weeks.md`。
 
@@ -310,6 +317,10 @@ Firebase Auth Google 登入需要在 Firebase Console → Authentication → Set
 | audio_generator.html "Failed to fetch" | CORS 限制 file:// | 必須從 https:// 執行 |
 | "Site Not Found" | Firebase Hosting 沒部署 | app 在 GitHub Pages，不是 Firebase Hosting |
 | 教師成績不同步 | 使用一次性 get() | 改用 onSnapshot 即時監聽 |
+| 部署後看不到新功能/聽到舊音檔 | 瀏覽器快取（GitHub Pages 部署本身約 1-2 分鐘） | Ctrl+Shift+R 強制重整；先 curl 線上檔案確認已部署再判斷 |
+| 週次按鈕點不了 | 該週鎖定，或頁面在解鎖前載入（鎖定狀態只在載入時讀一次） | 教師端解鎖後重整頁面 |
+| Voice ID 聲音性別不對 | ElevenLabs voice 名稱看不出性別（l4Coq669 "Hope" 其實是女聲） | 先生成試聽檔給 Stephanie 確認再正式使用；內建男聲備選：Josh TxGEqnHWrfWFTfGW9XjX、Liam TX3LPaxmHKxFdv7VOQHJ、Chris iP95p4xoKVk53GoZ742B |
+| API key 無法列出 voices (401) | key 只有 TTS 權限 | 直接用內建 premade voice ID 測試即可 |
 
 ---
 
@@ -332,7 +343,10 @@ Firebase Auth Google 登入需要在 Firebase Console → Authentication → Set
 4. **目標片語**: 8-12 個全數自然融入，每個片語所在句子的情境要清楚好記
 5. **語speaking風格**: 縮寫（I'm, gotta, wanna）、自然反應（"No way!", "Wait, seriously?"）、discourse markers（Well, Actually, I mean）
 6. **語調特徵（最重要）**: 連音（grab‿a）、至少 2 個 Wh-/選擇疑問句、至少 1 個驚訝反應、至少 1 個鼓勵語句、強調重音（"So you DO like..."）、情緒多變
-7. **8 句 key sentences 事先設計**: 5-15 字、含目標片語、語調特徵明顯、獨立可理解；寫 script 時就規劃好哪 8 句，不是事後撿
+7. **8 句 key sentences 事先設計**: 5-15 字、獨立可理解；寫 script 時就規劃好哪 8 句，不是事後撿
+   - **Prosody 優先（Stephanie 2026-09 明確要求）**: 挑語調豐富的句子（感嘆、重複強調、不敢置信問句、選擇疑問 ↗↘、回聲問句＋轉折、慌張感），**不挑語調平淡的公式句**（如 "I always say half sugar, less ice" 這種口訣句）——平淡但重要的片語放字彙表用 🔊 學發音即可
+   - 一句可以不含目標片語，只要語調練習價值高（vocab 設 null）
+   - **Mia / Leo 各約 4 句**，男女聲平均，學生可選擇模仿的角色
 8. **有趣**: 包含一個笑點；結尾輕鬆（如 "Next time it's on me!"）
 9. **禁止**: "Welcome to..." 開頭、解釋文法、教科書腔、中文
 10. **產出後**: 先給 Stephanie 過目，逐句修改到定稿才生成音檔；她常見的修改包括增加主題相關實用句（如點餐的客製化說法）、刪掉不自然的 turn

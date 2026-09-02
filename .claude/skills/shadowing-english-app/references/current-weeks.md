@@ -140,15 +140,15 @@
 
 **單字片語**: grab a coffee, my usual, half sugar less ice, make it a double, dairy-free, on the side, for here or to go, I'll have..., Can I have...?, What do you recommend?, signature drink, treat someone
 
-**8 句跟讀精選句**（依角色配音：Mia 女聲／Leo 男聲）:
-1. "Finally! I've been dying to grab a coffee all day." — grab a coffee (Mia)
-2. "I just get my usual. A large iced matcha latte." — my usual (Mia)
-3. "I always say half sugar, less ice." — half sugar, less ice (Mia)
-4. "Then go for an Americano. Hot or iced?" — hot or iced (Mia)
-5. "You can make it a double. Two espresso shots." — make it a double (Mia)
-6. "Can I have a large iced matcha latte, half sugar, less ice?" — Can I have (Mia)
-7. "I'll have a small iced latte, no sugar, with oat milk." — I'll have (Leo)
-8. "Wait, for here or to go? She's asking me." — for here or to go (Leo)
+**8 句跟讀精選句**（Prosody 優先版，依角色配音：Mia 女聲／Leo 男聲=Josh）:
+1. "Finally! I've been dying to grab a coffee all day." — grab a coffee，感嘆語調 (Mia)
+2. "There are like fifty drinks up there. Fifty!" — 重複強調 (Leo)
+3. "Ha! I just get my usual. A large iced matcha latte." — my usual (Mia)
+4. "Whoa, you can change all that stuff?" — 不敢置信問句 ↗ (Leo)
+5. "Then go for an Americano. Hot or iced?" — 選擇疑問 ↗↘ (Mia)
+6. "Oh, they can do that? That's actually great." — 回聲問句＋轉折 (Leo)
+7. "Can I have a large iced matcha latte, half sugar, less ice?" — Can I have，列舉節奏 (Mia)
+8. "Wait, for here or to go? She's asking me." — for here or to go，慌張感 (Leo)
 
 ---
 
