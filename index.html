@@ -1463,10 +1463,10 @@ Leo: Deal. Next time it's on me!`,
             return (
                 <div className="space-y-6">
                     <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-                        <h3 className="font-bold text-gray-900 mb-4">🎧 Podcast 完整音檔</h3>
+                        <h3 className="font-bold text-gray-900 mb-4">🎧 Podcast 完整音檔 — Week {weekId}: {courseContent.title}</h3>
                         <audio
                             controls
-                            src={`W${weekId}/W${weekId}_full.m4a`}
+                            src={weekId >= 10 ? `audio/W${weekId}/W${weekId}_full.mp3` : `W${weekId}/W${weekId}_full.m4a`}
                             className="w-full"
                             style={{borderRadius: '8px'}}
                         />
@@ -2268,10 +2268,10 @@ Leo: Deal. Next time it's on me!`,
                                 {isOpen && hasContent && (
                                     <div className="px-4 pb-5 border-t border-gray-100">
                                         <div className="mt-4 mb-4">
-                                            <h4 className="font-bold text-gray-900 mb-2 text-sm">🎧 Podcast 完整音檔</h4>
+                                            <h4 className="font-bold text-gray-900 mb-2 text-sm">🎧 Podcast 完整音檔 — Week {week.id}: {week.title}</h4>
                                             <audio
                                                 controls
-                                                src={`W${week.id}/W${week.id}_full.m4a`}
+                                                src={week.id >= 10 ? `audio/W${week.id}/W${week.id}_full.mp3` : `W${week.id}/W${week.id}_full.m4a`}
                                                 className="w-full"
                                                 style={{borderRadius: '8px'}}
                                             />
