@@ -108,15 +108,20 @@ API_KEY: sk_558bbc35f1541d293966060323f25427ddb5086498d69e57
 ```
 shadowing-english/
 ├── index.html                 # 主 app（唯一的程式碼檔案）
-├── audio_generator.html       # 瀏覽器端 ElevenLabs 批量音檔生成工具
-├── generate_audio.py          # Python 版音檔生成腳本（備用）
-├── W1/                        # Week 1 音檔資料夾
-│   ├── W1_S1.mp3             # Sentence 1
-│   ├── W1_S2.mp3             # Sentence 2
-│   └── ... (W1_S8.mp3)
-├── W2/                        # Week 2
-├── ...
-└── W9/                        # Week 9
+├── generate_week_audio.py     # ★每週音檔 pipeline：雙聲 podcast + 8 句跟讀（含響度標準化）
+├── generate_vocab_audio.py    # ★字彙發音 pipeline：解析 index.html 自動生成 W{N}_V{id}.mp3
+├── generate_week_video.py     # ★每週動畫影片生成器（輸出到 videos/，不 commit）
+├── assets/
+│   └── shadow_transition.mp3  # 影片共用過場口白 "Now, let's shadow these sentences..."
+├── videos/                    # 影片輸出（.gitignore 排除）
+├── audio/
+│   ├── W1/ ... W9/            # W{N}_S1-8.mp3（跟讀）+ W{N}_V{id}.mp3（字彙發音）
+│   ├── W10/                   # W10 起另含 W{N}_full.mp3（ElevenLabs 完整 podcast）
+│   └── week 1/ ... week 9/    # NotebookLM 時期原始檔備份（m4a + transcript docx）
+├── W1/ ... W9/                # 舊路徑：W{N}_full.m4a（NotebookLM podcast，app 仍引用）
+├── audio_generator.html       # （legacy）瀏覽器端批量音檔工具
+├── generate_audio.py          # （legacy）W1-W9 單聲音生成腳本
+└── .claude/skills/shadowing-english-app/   # 本 skill（隨 repo 版控）
 ```
 
 **音檔路徑函式:**
@@ -126,7 +131,7 @@ function getSentenceAudioSrc(weekId, sentenceNum) {
 }
 ```
 
-**重要**: 音檔存放在 `audio/W{n}/` 路徑下（GitHub repo 結構），相對於 index.html。
+**重要**: 跟讀/字彙音檔存放在 `audio/W{n}/`；完整 podcast W1-W9 在根目錄 `W{n}/*.m4a`、W10+ 在 `audio/W{n}/W{n}_full.mp3`。
 
 ---
 
@@ -199,7 +204,7 @@ const COURSE_DATA = {
 };
 ```
 
-### 現有週次 (Week 1-9)
+### 現有週次
 
 | Week | Title | 句數 |
 |------|-------|------|
@@ -213,6 +218,7 @@ const COURSE_DATA = {
 | 8 | Homestay English | 8 |
 | 9 | Screen Time | 8 |
 | 10 | Ordering at a Café | 8 |
+| 11 | MBTI & Personality | 8 |
 
 **27 週完整規劃**（含 Semester 2-3 待製作主題清單）見 `references/current-weeks.md`。
 
@@ -255,26 +261,19 @@ const CLASSES = {
 4. **更新 `COURSE_DATA`**：新增 entry（title、vocabulary 12 個含 IPA、dialogue、comprehensionQuestions 3 題、keySentences 8 句含語調提示）
    - `WEEKS` 陣列是自動衍生的，不用手動加
 5. **Git commit + push** → GitHub Pages 自動部署
-6. **（可選）產動畫影片**：更新 `generate_week_video.py` 的 `WEEK`/`TITLE`/`DIALOGUE`/`KEY_SENTENCES` 後執行 → `videos/W{N}_*.mp4`（不 commit 到 repo，直接傳給 Stephanie）
-   - 內容：品牌畫面＋頭像動畫（說話者跳動，**不顯示名字**）＋逐句字幕（比例估時）＋對話結束停 3 秒 → "Now, let's shadow..."（`assets/shadow_transition.mp3`）→ 8 句逐句播放，每句後留 10 秒練習（倒數條）
-   - **品牌色：森林綠 #5d9b76**（Stephanie 2026-09 定案，影片專用）
-   - 需要 moviepy + imageio-ffmpeg + pillow；**影片內不能用 emoji**（Arial 不支援，會變空方框）
+6. **產動畫影片**（固定步驟）：更新 `generate_week_video.py` 的 `WEEK`/`TITLE`/`DIALOGUE`/`KEY_SENTENCES` 後執行 → `videos/W{N}_*.mp4`，用 SendUserFile 傳給 Stephanie。完整規格見「11. 每週動畫影片生成」
 7. **Stephanie 驗收**：用「老師測試」帳號（電機適性分組 #21，Google 帳號 stephanie0223@gmail.com 已綁定）登入試聽；新週次預設 🔒 鎖定（unlockedWeeks 存 Firestore），教師端確認後手動解鎖
    - **提醒她強制重整**（Ctrl+Shift+R）：部署後瀏覽器常快取舊頁面/舊音檔，同檔名的音檔重新生成後尤其容易聽到舊版
 
 已定案的 27 週主題規劃見 `references/current-weeks.md`。
 
-### 生成音檔
+### 生成音檔（legacy 工具，W10 起改用上方自動化流程）
 
-**方法一：瀏覽器工具 `audio_generator.html`**
+**方法一：瀏覽器工具 `audio_generator.html`**（W1-W9 時期）
 - 必須從 https:// 提供（CORS 限制，不能用 file://）
-- 上傳到 GitHub Pages 後開啟即可使用
-- 會自動生成 ZIP 下載
 
-**方法二：Python 腳本 `generate_audio.py`**
-- `pip install requests` → `python generate_audio.py`
+**方法二：Python 腳本 `generate_audio.py`**（W1-W9 時期，單聲音）
 - 自動跳過已存在且 >1KB 的檔案
-- 損毀/空檔案會自動重新生成
 
 **ElevenLabs 音檔 voice_settings:**
 ```json
@@ -358,7 +357,36 @@ Firebase Auth Google 登入需要在 Firebase Console → Authentication → Set
 
 ---
 
-## 11. 重要注意事項
+## 11. 每週動畫影片生成（generate_week_video.py）
+
+每週教材可產一支動畫練習影片（給 YouTube／課堂播放）。W11 起為固定步驟。
+
+### 影片結構（總長約 3.5-4 分鐘）
+
+1. **對話段**：完整 podcast 播放，畫面為品牌頂欄＋週次標題＋兩個卡通頭像（**不顯示 Mia/Leo 名字**，只用顏色區分：粉=女、藍=男）；說話者頭像跳動＋外圈高亮；底部白框逐句字幕（時間依句子字元數比例估算）；底部森林綠進度條
+2. **停 3 秒**（Stephanie 要求：過場不能跟內容黏在一起）
+3. **過場**：播 `assets/shadow_transition.mp3`（"Now, let's shadow these sentences. Listen, and repeat during the pause."，Mia 女聲，可重複使用不用重生成）；畫面純文字置中，**不放 emoji**
+4. **Shadowing 練習段**：8 句逐句進行——
+   - 播句子（畫面：Sentence N / 8＋白框句子＋"Listen..."）
+   - **留 10 秒空白**讓學生開口練習（畫面："Your turn! Say it out loud!"＋倒數進度條）
+   - 練習段用真實音檔長度計時，字幕完全同步
+
+### 操作步驟
+
+1. 更新 `generate_week_video.py` 頂部的 `WEEK`、`TITLE`、`DIALOGUE`、`KEY_SENTENCES`（跟 `generate_week_audio.py` 內容一致）
+2. `python generate_week_video.py` → 輸出 `videos/W{N}_{Title}.mp4`（720p、~3.5MB）
+3. `videos/` 已 gitignore，影片用 SendUserFile 直接傳給 Stephanie，不進 repo
+
+### 設計規範
+
+- **品牌色：森林綠 #5d9b76**（RGB 93,155,118；Stephanie 2026-09 定案）；背景 #f6faf7、淺色點綴 #e3efe7
+- 字型用 Windows Arial／Arial Bold；**絕不放 emoji**（Arial 不支援會變空方框，🎯🔊🎤 都踩過雷）
+- 依賴：`pip install moviepy imageio-ffmpeg pillow numpy`（moviepy 2.x API：`with_audio`/`with_fps`）
+- 影片中 8 句文字若有修改（如拿掉 "Ha!"），app 的 keySentences 和跟讀音檔**必須同步改**，Azure 評分才對得上
+
+---
+
+## 12. 重要注意事項
 
 - **不要使用瀏覽器 TTS**: 所有音檔必須來自 ElevenLabs，`speechSynthesis` 已完全移除
 - **單一檔案架構**: 所有程式碼都在 index.html 中，不要拆成多個檔案

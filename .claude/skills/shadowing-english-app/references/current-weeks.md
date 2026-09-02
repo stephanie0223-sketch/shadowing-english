@@ -152,6 +152,24 @@
 
 ---
 
+## Week 11: MBTI & Personality
+
+**單字片語**: introvert, extrovert, keep to oneself, small talk, feel drained, recharge one's batteries, a people person, the life of the party, speak up, come out of one's shell, open up, one-on-one
+
+**8 句跟讀精選句**（Prosody 優先，Mia 女聲／Leo 男聲=Josh）:
+1. "Wait, seriously? You stayed up for a personality test?" — 不敢置信雙問句 (Leo)
+2. "It was two hundred questions. Two hundred!" — 重複強調（原有 "Ha!" 開頭，Stephanie 嫌不自然已拿掉）(Mia)
+3. "Small talk with strangers? That drains me." — small talk/drain，回聲問句 (Leo)
+4. "So how do you recharge your batteries?" — recharge，Wh-問句 (Mia)
+5. "Zero people? That sounds so lonely to me." — 回聲問句＋誇張 (Mia)
+6. "It's not lonely. It's peaceful. There's a difference." — 對比重音 (Leo)
+7. "Thanks. I'm slowly coming out of my shell." — come out of one's shell (Leo)
+8. "That's the spirit! Baby steps, right?" — 鼓勵＋附加問句 (Mia)
+
+已產出動畫影片 `videos/W11_MBTI_and_Personality.mp4`（含片尾 shadowing 練習段）。
+
+---
+
 ## 27 週完整主題規劃（2026-09 定案）
 
 一學期 9 週 × 3 學期 = 27 週。W1-W10 已完成。
