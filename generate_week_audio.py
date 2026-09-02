@@ -38,7 +38,7 @@ WEEK = 11
 DIALOGUE = [
     ("Mia", "Okay, I did that MBTI test last night. I'm a total extrovert."),
     ("Leo", "Wait, seriously? You stayed up for a personality test?"),
-    ("Mia", "Ha! It was two hundred questions. Two hundred!"),
+    ("Mia", "It was two hundred questions. Two hundred!"),
     ("Leo", "No way. I'd give up after ten."),
     ("Mia", "So what's your type? Let me guess. Introvert?"),
     ("Leo", "Yep. A proud introvert. I really keep to myself."),
@@ -74,7 +74,7 @@ DIALOGUE = [
 
 KEY_SENTENCES = [
     ("Leo", "Wait, seriously? You stayed up for a personality test?"),
-    ("Mia", "Ha! It was two hundred questions. Two hundred!"),
+    ("Mia", "It was two hundred questions. Two hundred!"),
     ("Leo", "Small talk with strangers? That drains me."),
     ("Mia", "So how do you recharge your batteries?"),
     ("Mia", "Zero people? That sounds so lonely to me."),

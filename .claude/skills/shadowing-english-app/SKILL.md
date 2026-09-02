@@ -99,6 +99,7 @@ API_KEY: sk_558bbc35f1541d293966060323f25427ddb5086498d69e57
 - 每句跟讀音檔由 ElevenLabs 生成，**不使用瀏覽器 TTS**（已廢棄，語調太機械化）
 - W10 起跟讀音檔**依角色配音**（該句是誰講的就用誰的聲音），W1-W9 為單一聲音
 - 完整 podcast 用 Text-to-Dialogue API 一次生成整段雙人對話，銜接自然
+- **響度標準化**：所有音檔生成後自動用 ffmpeg loudnorm 統一到 -16 LUFS（imageio_ffmpeg 提供 ffmpeg，兩個生成腳本內建 `normalize_loudness()`）——否則不同 voice 音量/距離感不一致，Stephanie 會聽出來
 
 ---
 
