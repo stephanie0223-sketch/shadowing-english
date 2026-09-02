@@ -163,7 +163,7 @@
 | 週次 | 主題 | 中文 | 狀態 |
 |------|------|------|------|
 | W10 | Ordering at a Café | 咖啡廳點餐 | ✅ 完成 |
-| W11 | MBTI & Personality | MBTI 內向 vs 外向 | 待製作 |
+| W11 | MBTI & Personality | MBTI 內向 vs 外向 | ✅ 完成 |
 | W12 | Hiking, Camping, Cycling & SUP | 登山露營騎車＆立槳 | 待製作 |
 | W13 | Showing Taiwan to Foreigners | 介紹台灣 | 待製作 |
 | W14 | Night Market | 逛夜市 | 待製作 |
