@@ -74,12 +74,12 @@ DIALOGUE = [
 
 KEY_SENTENCES = [
     ("Mia", "Finally! I've been dying to grab a coffee all day."),
-    ("Mia", "I just get my usual. A large iced matcha latte."),
-    ("Mia", "I always say half sugar, less ice."),
+    ("Leo", "There are like fifty drinks up there. Fifty!"),
+    ("Mia", "Ha! I just get my usual. A large iced matcha latte."),
+    ("Leo", "Whoa, you can change all that stuff?"),
     ("Mia", "Then go for an Americano. Hot or iced?"),
-    ("Mia", "You can make it a double. Two espresso shots."),
+    ("Leo", "Oh, they can do that? That's actually great."),
     ("Mia", "Can I have a large iced matcha latte, half sugar, less ice?"),
-    ("Leo", "I'll have a small iced latte, no sugar, with oat milk."),
     ("Leo", "Wait, for here or to go? She's asking me."),
 ]
 
