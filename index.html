@@ -3084,6 +3084,11 @@ Leo: Deal. Next time it's on me!`,
                                                         {wt ? (
                                                             <div>
                                                                 <span className={`font-bold ${wt.total >= 80 ? 'text-green-600' : wt.total >= 60 ? 'text-blue-600' : 'text-orange-600'}`}>{wt.total}</span>
+                                                                <p className="text-xs whitespace-nowrap">
+                                                                    <span className="text-blue-600">音{wt.accuracy}</span>
+                                                                    {' '}<span className="text-green-600">完{wt.completeness}</span>
+                                                                    {' '}<span className="text-pink-600">調{wt.prosody}</span>
+                                                                </p>
                                                                 <p className="text-xs text-gray-400">{wt.sentenceCount}句</p>
                                                             </div>
                                                         ) : (
