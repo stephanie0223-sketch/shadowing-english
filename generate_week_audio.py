@@ -116,7 +116,7 @@ def normalize_loudness(path, target=-16, dynamic=False):
 
 
 def tts_line(text, voice_id, output_path):
-    """單句 TTS (eleven_turbo_v2)；Leo 聲音響度目標 -14（比 Mia 大 2dB，Stephanie 聽感校正）"""
+    """單句 TTS (eleven_turbo_v2)；Leo 聲音響度目標 -12（比 Mia 大 4dB，Stephanie 聽感校正）"""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     data = {"text": text, "model_id": "eleven_turbo_v2", "voice_settings": VOICE_SETTINGS}
     try:
