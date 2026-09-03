@@ -170,6 +170,24 @@
 
 ---
 
+## Week 12: Hiking, Camping, Cycling & SUP
+
+**單字片語** (13): sore all over, go cycling, pedal uphill, work up a sweat, pitch a tent, campfire, stand-up paddleboarding (SUP), keep one's balance, wipe out, catch the sunrise, travel light, sleeping bag, be game (for something)
+
+**8 句跟讀精選句**（Prosody 優先，Mia 4／Leo 4）:
+1. "Don't laugh. I'm sore all over. My legs are dead." — sore all over，哀怨 (Leo)
+2. "Forty?! On a bike? That's crazy." — 回聲驚呼 (Mia)
+3. "I bet you worked up a sweat." — work up a sweat (Mia)
+4. "The hardest part is keeping your balance." — keep one's balance (Leo)
+5. "I wiped out five times. Five!" — wipe out，重複強調 (Leo)
+6. "So... was it fun or just painful?" — 選擇疑問 (Mia)
+7. "We got up early to catch the sunrise. Unreal." — catch the sunrise，讚嘆 (Leo)
+8. "I'm game! But I'm NOT doing forty kilometers." — be game，NOT 強調重音 (Mia)
+
+備註：Stephanie 選用 "I'm game!"（取代 I'm in，學生較少見、教學價值高）。片語全部避開 W6 Outdoor Activities 已教過的。
+
+---
+
 ## 27 週完整主題規劃（2026-09 定案）
 
 一學期 9 週 × 3 學期 = 27 週。W1-W10 已完成。
@@ -182,7 +200,7 @@
 |------|------|------|------|
 | W10 | Ordering at a Café | 咖啡廳點餐 | ✅ 完成 |
 | W11 | MBTI & Personality | MBTI 內向 vs 外向 | ✅ 完成 |
-| W12 | Hiking, Camping, Cycling & SUP | 登山露營騎車＆立槳 | 待製作 |
+| W12 | Hiking, Camping, Cycling & SUP | 登山露營騎車＆立槳 | ✅ 完成 |
 | W13 | Showing Taiwan to Foreigners | 介紹台灣 | 待製作 |
 | W14 | Night Market | 逛夜市 | 待製作 |
 | W15 | Public Transport | 搭大眾運輸 | 待製作 |

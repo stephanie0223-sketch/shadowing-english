@@ -218,6 +218,7 @@ const COURSE_DATA = {
 | 9 | Screen Time | 8 |
 | 10 | Ordering at a Café | 8 |
 | 11 | MBTI & Personality | 8 |
+| 12 | Hiking, Camping, Cycling & SUP | 8 |
 
 **27 週完整規劃**（含 Semester 2-3 待製作主題清單）見 `references/current-weeks.md`。
 
