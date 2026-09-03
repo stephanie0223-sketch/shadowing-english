@@ -92,13 +92,18 @@ def file_ok(path):
     return os.path.exists(path) and os.path.getsize(path) > 1000
 
 
-def normalize_loudness(path):
-    """統一響度到 -16 LUFS，消除不同 voice 的音量/距離感差異"""
+def normalize_loudness(path, target=-16, dynamic=False):
+    """統一響度，消除不同 voice 的音量/距離感差異。
+    - Leo(Josh) 單句用 target=-14（聽感較遠，比 Mia 加 2dB）
+    - 完整 podcast 用 dynamic=True：dynaudnorm 先拉平檔內兩位講者的音量差"""
     try:
         import imageio_ffmpeg, subprocess
         ff = imageio_ffmpeg.get_ffmpeg_exe()
         tmp = path + '.norm.mp3'
-        r = subprocess.run([ff, '-y', '-i', path, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-b:a', '160k', tmp],
+        af = f'loudnorm=I={target}:TP=-1.5:LRA=11'
+        if dynamic:
+            af = 'dynaudnorm=f=250:g=15:m=8,' + af
+        r = subprocess.run([ff, '-y', '-i', path, '-af', af, '-b:a', '160k', tmp],
                            capture_output=True, text=True)
         if r.returncode == 0 and os.path.getsize(tmp) > 1000:
             os.replace(tmp, path)
@@ -111,7 +116,7 @@ def normalize_loudness(path):
 
 
 def tts_line(text, voice_id, output_path):
-    """單句 TTS (eleven_turbo_v2)"""
+    """單句 TTS (eleven_turbo_v2)；Leo 聲音響度目標 -14（比 Mia 大 2dB，Stephanie 聽感校正）"""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     data = {"text": text, "model_id": "eleven_turbo_v2", "voice_settings": VOICE_SETTINGS}
     try:
@@ -122,7 +127,7 @@ def tts_line(text, voice_id, output_path):
     if r.status_code == 200 and len(r.content) > 1000:
         with open(output_path, 'wb') as f:
             f.write(r.content)
-        normalize_loudness(output_path)
+        normalize_loudness(output_path, target=-14 if voice_id == VOICES["Leo"] else -16)
         return True
     print(f"  ❌ {r.status_code}: {r.text[:150]}")
     return False
@@ -142,7 +147,7 @@ def try_text_to_dialogue(output_path):
     if r.status_code == 200 and len(r.content) > 10000:
         with open(output_path, 'wb') as f:
             f.write(r.content)
-        normalize_loudness(output_path)
+        normalize_loudness(output_path, dynamic=True)
         print(f"  ✅ 完整 podcast 完成 ({len(r.content)/1024:.0f} KB)")
         return True
     print(f"  ⚠️ Text-to-Dialogue 不可用 ({r.status_code}): {r.text[:200]}")
