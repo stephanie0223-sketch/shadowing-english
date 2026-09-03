@@ -102,8 +102,8 @@ API_KEY: sk_558bbc35f1541d293966060323f25427ddb5086498d69e57
 - 完整 podcast 用 Text-to-Dialogue API 一次生成整段雙人對話，銜接自然
 - **響度標準化**（Stephanie 聽感校正，2026-09 定案）：
   - Mia 單句／字彙音檔 → -16 LUFS
-  - **Leo(Josh) 單句 → -14 LUFS**（Josh 聽感較遠較小聲，比 Mia 加 2dB 才平衡）
-  - 完整 podcast → `dynaudnorm=f=250:g=15:m=8` 先拉平檔內兩位講者音量差，再 loudnorm -16（整檔 loudnorm 無法平衡檔內的講者差異）
+  - **Leo(Josh) 單句 → -12 LUFS**（Josh 聽感較遠較小聲，比 Mia 加 4dB 才平衡；-14 仍不夠，兩輪校正定案）
+  - 完整 podcast → `dynaudnorm=f=150:g=11:m=12` 先拉平檔內兩位講者音量差，再 loudnorm -15（整檔 loudnorm 無法平衡檔內的講者差異）
   - 都內建在 `normalize_loudness()`，生成時自動套用
 
 ---

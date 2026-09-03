@@ -94,7 +94,7 @@ def file_ok(path):
 
 def normalize_loudness(path, target=-16, dynamic=False):
     """統一響度，消除不同 voice 的音量/距離感差異。
-    - Leo(Josh) 單句用 target=-14（聽感較遠，比 Mia 加 2dB）
+    - Leo(Josh) 單句用 target=-12（聽感較遠，比 Mia 加 4dB，Stephanie 兩輪校正後定案）
     - 完整 podcast 用 dynamic=True：dynaudnorm 先拉平檔內兩位講者的音量差"""
     try:
         import imageio_ffmpeg, subprocess
@@ -102,7 +102,7 @@ def normalize_loudness(path, target=-16, dynamic=False):
         tmp = path + '.norm.mp3'
         af = f'loudnorm=I={target}:TP=-1.5:LRA=11'
         if dynamic:
-            af = 'dynaudnorm=f=250:g=15:m=8,' + af
+            af = 'dynaudnorm=f=150:g=11:m=12,' + af
         r = subprocess.run([ff, '-y', '-i', path, '-af', af, '-b:a', '160k', tmp],
                            capture_output=True, text=True)
         if r.returncode == 0 and os.path.getsize(tmp) > 1000:
@@ -127,7 +127,7 @@ def tts_line(text, voice_id, output_path):
     if r.status_code == 200 and len(r.content) > 1000:
         with open(output_path, 'wb') as f:
             f.write(r.content)
-        normalize_loudness(output_path, target=-14 if voice_id == VOICES["Leo"] else -16)
+        normalize_loudness(output_path, target=-12 if voice_id == VOICES["Leo"] else -16)
         return True
     print(f"  ❌ {r.status_code}: {r.text[:150]}")
     return False
