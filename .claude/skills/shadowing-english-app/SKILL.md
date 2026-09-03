@@ -25,6 +25,7 @@ description: 維護和擴充 Shadowing English 生活英語跟讀練習 web app�
 - **系統二 (Shadowing, 本 app)**: 從同一 script 精選 8 句含慣用語/語調特色的句子 → ElevenLabs 生成音檔 → 學生聽一句錄一句 → AI 評分
 
 **注意：自 W10 起已不再使用 NotebookLM**（品質不穩定像抽獎）。全部改用 Claude 寫 script + ElevenLabs 配音的全自動流程，見「7. 常見維護任務 → 新增一週（W10+ 自動化流程）」。
+**W1-W9 的完整 podcast 維持 NotebookLM 版本不重做**（Stephanie 2026-09 決定：學生已聽過、對話較即興自然）；只有跟讀/字彙音檔是 ElevenLabs。
 
 ---
 
@@ -116,10 +117,9 @@ shadowing-english/
 ├── videos/                    # 影片輸出（.gitignore 排除）
 ├── audio/
 │   ├── W1/ ... W9/            # W{N}_S1-8.mp3（跟讀）+ W{N}_V{id}.mp3（字彙發音）
-│   ├── W10/                   # W10 起另含 W{N}_full.mp3（ElevenLabs 完整 podcast）
-│   └── week 1/ ... week 9/    # NotebookLM 時期原始檔備份（m4a + transcript docx）
-├── W1/ ... W9/                # 舊路徑：W{N}_full.m4a（NotebookLM podcast，app 仍引用）
-├── archive/                   # 封存區（gitignore）：NotebookLM docx、舊原型、legacy 工具
+│   └── W10/ W11/ ...          # W10 起另含 W{N}_full.mp3（ElevenLabs 完整 podcast）
+├── W1/ ... W9/                # W{N}_full.m4a：NotebookLM podcast，**Stephanie 決定保留不重做**（app 仍引用）
+├── archive/                   # 封存區（gitignore）：NotebookLM docx/原始檔備份、舊原型、legacy 工具
 └── .claude/skills/shadowing-english-app/   # 本 skill（隨 repo 版控）
 ```
 
