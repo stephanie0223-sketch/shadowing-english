@@ -11,7 +11,7 @@
 - 部署：GitHub Pages `stephanie0223-sketch.github.io/shadowing-english/`（repo: `stephanie0223-sketch/shadowing-english`，push main 即自動部署）
 - **進度：W1-W12 完成**（共規劃 27 週，一學期 9 週 × 3 學期）。W13-W27 主題已定案，見 `.claude/skills/shadowing-english-app/references/current-weeks.md`
 - 下一週：**W13 Showing Taiwan to Foreigners（介紹台灣）**
-- 使用班級：電機二忠（36 人）、電機適性分組（20 人＋第 21 位「老師測試」= Stephanie 的測試帳號）
+- 使用班級：電機二忠（36 人）、電機適性分組（21 人＋第 22 位「老師測試」= Stephanie 的測試帳號）
 
 ## 2. 已確定的決定與規範
 

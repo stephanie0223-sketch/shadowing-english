@@ -237,7 +237,7 @@ const CLASSES = {
         // 36 位學生（原「電機一忠」，2026-09 升級改名）
     ],
     '電機適性分組': [
-        // 20 位真實學生（電機一忠10位＋電機一孝10位）+ 第21位「老師測試」
+        // 21 位真實學生（電機一忠10＋電機一孝10＋後加入1位）+ 第22位「老師測試」
         // 完整名單見 references/student-roster.md
     ]
 };
@@ -266,7 +266,7 @@ const CLASSES = {
    - `WEEKS` 陣列是自動衍生的，不用手動加
 5. **Git commit + push** → GitHub Pages 自動部署
 6. **產動畫影片**（固定步驟）：更新 `generate_week_video.py` 的 `WEEK`/`TITLE`/`DIALOGUE`/`KEY_SENTENCES` 後執行 → `videos/W{N}_*.mp4`，用 SendUserFile 傳給 Stephanie。完整規格見「11. 每週動畫影片生成」
-7. **Stephanie 驗收**：用「老師測試」帳號（電機適性分組 #21，Google 帳號 stephanie0223@gmail.com 已綁定）登入試聽；新週次預設 🔒 鎖定（unlockedWeeks 存 Firestore），教師端確認後手動解鎖
+7. **Stephanie 驗收**：用「老師測試」帳號（電機適性分組 #22，Google 帳號 stephanie0223@gmail.com 已綁定）登入試聽；新週次預設 🔒 鎖定（unlockedWeeks 存 Firestore），教師端確認後手動解鎖
    - **提醒她強制重整**（Ctrl+Shift+R）：部署後瀏覽器常快取舊頁面/舊音檔，同檔名的音檔重新生成後尤其容易聽到舊版
 
 已定案的 27 週主題規劃見 `references/current-weeks.md`。
