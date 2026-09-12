@@ -1349,6 +1349,10 @@ Leo: Deal. Twenty, and ice cream after.`,
                 }
             };
 
+            // LINE / FB / IG 內建瀏覽器無法使用 Google 登入（Google 封鎖 WebView OAuth）
+            const isInAppBrowser = /Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent);
+            const externalUrl = window.location.href.split('#')[0] + (window.location.search ? '&' : '?') + 'openExternalBrowser=1';
+
             if (!mode) {
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -1356,6 +1360,15 @@ Leo: Deal. Twenty, and ice cream after.`,
                             <h1 className="text-4xl font-bold text-gray-900 mb-2">🎧</h1>
                             <h2 className="text-2xl font-bold text-gray-900 mb-8">Shadowing English</h2>
                             <p className="text-gray-600 mb-8">生活英語跟讀練習</p>
+                            {isInAppBrowser && (
+                                <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6 text-left">
+                                    <p className="text-sm font-bold text-yellow-800 mb-2">⚠️ 偵測到 LINE 內建瀏覽器</p>
+                                    <p className="text-xs text-yellow-700 mb-3">Google 不允許在 LINE 裡登入，請改用外部瀏覽器開啟：</p>
+                                    <a href={externalUrl} className="block w-full bg-yellow-500 text-white py-2 rounded-lg font-semibold text-sm hover:bg-yellow-600 transition">
+                                        🚀 點我用瀏覽器開啟
+                                    </a>
+                                </div>
+                            )}
                             <button
                                 onClick={handleQuickGoogleLogin}
                                 disabled={isLoggingIn}

@@ -325,6 +325,7 @@ Firebase Auth Google 登入需要在 Firebase Console → Authentication → Set
 | 週次按鈕點不了 | 該週鎖定，或頁面在解鎖前載入（鎖定狀態只在載入時讀一次） | 教師端解鎖後重整頁面 |
 | Voice ID 聲音性別不對 | ElevenLabs voice 名稱看不出性別（l4Coq669 "Hope" 其實是女聲） | 先生成試聽檔給 Stephanie 確認再正式使用；內建男聲備選：Josh TxGEqnHWrfWFTfGW9XjX、Liam TX3LPaxmHKxFdv7VOQHJ、Chris iP95p4xoKVk53GoZ742B |
 | API key 無法列出 voices (401) | key 只有 TTS 權限 | 直接用內建 premade voice ID 測試即可 |
+| LINE 裡點連結無法 Google 登入 | Google 封鎖 App 內建瀏覽器(WebView)的 OAuth | 分享連結加 `?openExternalBrowser=1`（LINE 會自動改用外部瀏覽器開）；登入頁已內建偵測 LINE/FB/IG 瀏覽器並顯示跳轉按鈕 |
 
 ---
 
