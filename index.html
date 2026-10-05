@@ -83,6 +83,7 @@
                 }, { merge: true });
             } catch (err) {
                 console.error('Failed to save score:', err);
+                throw scoringError('save', String(err?.code || err));
             }
         }
 
@@ -176,11 +177,85 @@
         const AZURE_SPEECH_KEY = '2r698XaKOD9BPIT5h1f70BOlHxrPzUn54QpM5OgnwyBiOTaZ4kJrJQQJ99CDAC3pKaRXJ3w3AAAYACOGkLfX';
         const AZURE_SPEECH_REGION = 'eastasia';
 
+        // Error with a stage tag so the UI can explain what went wrong
+        function scoringError(stage, detail) {
+            const err = new Error(detail || stage);
+            err.stage = stage;
+            return err;
+        }
+
+        // Detect LINE / Facebook / Instagram in-app browsers (recording often fails there)
+        function isInAppBrowser() {
+            const ua = navigator.userAgent || '';
+            return /Line\/|FBAN|FBAV|Instagram|Messenger|MicroMessenger|; wv\)/i.test(ua);
+        }
+
+        // Turn a scoring/saving error into a message students can act on
+        function explainScoringError(err) {
+            const stage = err?.stage || '';
+            const detail = String(err?.message || err || '');
+            const inApp = isInAppBrowser();
+            const openInBrowser = '請複製網址，改用 Chrome（Android）或 Safari（iPhone）開啟。';
+
+            if (!navigator.onLine) {
+                return { title: '網路斷線，評分沒有送出', hint: '請確認網路連線後，按「送出這句」再試一次。' };
+            }
+            if (stage === 'sdk') {
+                return { title: 'AI 評分工具沒有載入成功', hint: inApp ? openInBrowser : '請重新整理網頁後再試一次。' };
+            }
+            if (stage === 'empty') {
+                return { title: '沒有錄到聲音', hint: inApp ? openInBrowser : '請確認瀏覽器已允許麥克風，按「重錄」再錄一次。' };
+            }
+            if (stage === 'decode') {
+                return {
+                    title: '這個瀏覽器錄出的音檔無法轉換',
+                    hint: inApp ? openInBrowser : '請改用最新版 Chrome 或 Safari；若是 iPhone，請先更新 iOS。'
+                };
+            }
+            if (stage === 'save') {
+                return { title: '分數已算出，但沒有存到雲端', hint: '請重新登入後再送出一次；若持續發生請告訴老師。' };
+            }
+            if (/quota|429|throttl|1007|exceed/i.test(detail)) {
+                return { title: 'AI 評分服務本月額度已用完', hint: '這不是你的問題，請告訴老師。' };
+            }
+            if (/401|403|auth|subscription|key/i.test(detail)) {
+                return { title: 'AI 評分服務驗證失敗', hint: '這不是你的問題，請告訴老師。' };
+            }
+            if (/network|websocket|connection|timeout|1006/i.test(detail)) {
+                return { title: '連不上 AI 評分服務', hint: inApp ? openInBrowser : '請確認網路（學校網路可能擋住），換個網路再試一次。' };
+            }
+            return { title: '評分失敗', hint: inApp ? openInBrowser : '請按「送出這句」再試一次；若持續發生，請截圖給老師。' };
+        }
+
+        // Explain why the microphone / recorder could not start
+        function explainMicError(err) {
+            const name = err?.name || '';
+            const detail = `mic: ${name} ${err?.message || err}`;
+            if (isInAppBrowser()) {
+                return { title: '這個瀏覽器不能錄音', hint: '你正在 LINE／IG／FB 裡開啟網頁。請複製網址，改用 Chrome（Android）或 Safari（iPhone）開啟。', detail };
+            }
+            if (name === 'NotAllowedError' || name === 'SecurityError') {
+                return { title: '麥克風權限被拒絕', hint: '請點網址列左邊的鎖頭／設定，把「麥克風」改成允許，再重新整理網頁。', detail };
+            }
+            if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+                return { title: '找不到麥克風', hint: '請確認裝置有麥克風（電腦要插耳麥），再重新整理網頁。', detail };
+            }
+            if (name === 'NotReadableError' || name === 'AbortError') {
+                return { title: '麥克風正被其他程式使用', hint: '請關掉其他正在用麥克風的 App（視訊、錄音、通話），再重新整理網頁。', detail };
+            }
+            if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices) {
+                return { title: '這個瀏覽器不支援錄音', hint: '請改用最新版 Chrome 或 Safari；若是 iPhone，請先更新 iOS。', detail };
+            }
+            return { title: '無法開始錄音', hint: '請確認瀏覽器已允許麥克風，重新整理網頁後再試一次。', detail };
+        }
+
         async function assessPronunciation(audioBlob, referenceText) {
             const SpeechSDK = window.SpeechSDK;
             if (!SpeechSDK) {
-                console.error('Speech SDK not loaded');
-                return null;
+                throw scoringError('sdk', 'Speech SDK not loaded');
+            }
+            if (!audioBlob || audioBlob.size === 0) {
+                throw scoringError('empty', 'Recorded audio is empty');
             }
 
             try {
@@ -205,7 +280,13 @@
 
                 // We need to convert the webm to PCM - use AudioContext
                 const audioContext = new AudioContext({ sampleRate: 16000 });
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                let audioBuffer;
+                try {
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                } catch (decodeErr) {
+                    audioContext.close();
+                    throw scoringError('decode', `${audioBlob.type || 'unknown type'}: ${decodeErr?.message || decodeErr}`);
+                }
                 const channelData = audioBuffer.getChannelData(0);
 
                 // Convert float32 to int16 PCM
@@ -269,13 +350,13 @@
                         (err) => {
                             recognizer.close();
                             audioContext.close();
-                            reject(err);
+                            reject(scoringError('azure', String(err)));
                         }
                     );
                 });
             } catch (error) {
                 console.error('Pronunciation assessment error:', error);
-                return null;
+                throw error;
             }
         }
 
@@ -1829,8 +1910,9 @@ Leo: Deal. Twenty, and ice cream after.`,
                         streamRef.current = stream;
                         setMicReady(true);
                     })
-                    .catch(() => {
-                        alert('無法存取麥克風，請在瀏覽器設定中允許麥克風權限。');
+                    .catch((err) => {
+                        console.error('Microphone error:', err);
+                        setScoreError(explainMicError(err));
                     });
                 return () => {
                     if (timerRef.current) clearInterval(timerRef.current);
@@ -1841,6 +1923,7 @@ Leo: Deal. Twenty, and ice cream after.`,
             const audioPlayerRef = React.useRef(null);
 
             const [audioError, setAudioError] = useState(null);
+            const [scoreError, setScoreError] = useState(null);
 
             const playSentence = () => {
                 setPhase('listening');
@@ -1868,14 +1951,19 @@ Leo: Deal. Twenty, and ice cream after.`,
 
             const startRecording = async () => {
                 try {
-                    // Reuse existing stream, or request new one if lost
+                    // Reuse existing stream, or request a new one if it was lost.
+                    // iPhone Safari mutes the mic track after the sentence audio plays,
+                    // so a muted / disabled track counts as lost too.
                     let stream = streamRef.current;
-                    if (!stream || stream.getTracks().every(t => t.readyState === 'ended')) {
+                    const streamDead = !stream || stream.getAudioTracks().some(t => t.readyState === 'ended' || t.muted || !t.enabled);
+                    if (streamDead) {
+                        if (stream) stream.getTracks().forEach(t => t.stop());
                         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         streamRef.current = stream;
                         setMicReady(true);
                     }
 
+                    setScoreError(null);
                     audioChunksRef.current = [];
                     const mediaRecorder = new MediaRecorder(stream);
                     mediaRecorderRef.current = mediaRecorder;
@@ -1885,7 +1973,14 @@ Leo: Deal. Twenty, and ice cream after.`,
                     };
 
                     mediaRecorder.onstop = () => {
-                        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                        // Label the blob with the format the browser actually recorded
+                        // (iPhone records audio/mp4, not webm — a wrong label makes playback fail)
+                        const mimeType = mediaRecorder.mimeType || audioChunksRef.current[0]?.type || 'audio/mp4';
+                        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+                        if (blob.size === 0) {
+                            setScoreError(explainScoringError(scoringError('empty', `recorded 0 bytes (${mimeType})`)));
+                            streamRef.current = null; // force a fresh mic stream next time
+                        }
                         const url = URL.createObjectURL(blob);
                         setAudioURLs(prev => ({ ...prev, [currentIdx]: url }));
                         setAudioBlobs(prev => ({ ...prev, [currentIdx]: blob }));
@@ -1894,14 +1989,16 @@ Leo: Deal. Twenty, and ice cream after.`,
                         setPhase('recorded');
                     };
 
-                    mediaRecorder.start();
+                    // Timeslice makes iPhone deliver audio data during recording, not only at stop
+                    mediaRecorder.start(1000);
                     setPhase('recording');
                     setRecordingTime(0);
                     timerRef.current = setInterval(() => {
                         setRecordingTime(prev => prev + 1);
                     }, 1000);
                 } catch (err) {
-                    alert('無法存取麥克風，請確認瀏覽器已允許麥克風權限。');
+                    console.error('Recording error:', err);
+                    setScoreError(explainMicError(err));
                 }
             };
 
@@ -1913,39 +2010,40 @@ Leo: Deal. Twenty, and ice cream after.`,
 
             const handleSubmitSentence = async () => {
                 setIsScoring(true);
+                setScoreError(null);
                 setPhase('submitted');
 
                 const blob = audioBlobs[currentIdx];
-                if (blob && currentSentence) {
-                    try {
-                        const result = await assessPronunciation(blob, currentSentence.text);
-                        if (result) {
-                            setSentenceScores(prev => ({ ...prev, [currentIdx]: result }));
-                            // Save to shared weekly scores (local)
-                            const scoreWithSentence = { ...result, sentence: currentSentence };
-                            if (setWeeklyScores) {
-                                setWeeklyScores(prev => ({
-                                    ...prev,
-                                    [weekId]: { ...(prev[weekId] || {}), [currentIdx]: scoreWithSentence }
-                                }));
-                            }
-                            // Save to Firestore (cloud)
-                            if (user.uid) {
-                                saveScoreToFirestore(user.uid, user.class, user.studentName, weekId, currentIdx, scoreWithSentence);
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Scoring error:', err);
+                try {
+                    if (!currentSentence) throw scoringError('unknown', 'No current sentence');
+                    const result = await assessPronunciation(blob, currentSentence.text);
+                    setSentenceScores(prev => ({ ...prev, [currentIdx]: result }));
+                    // Save to shared weekly scores (local)
+                    const scoreWithSentence = { ...result, sentence: currentSentence };
+                    if (setWeeklyScores) {
+                        setWeeklyScores(prev => ({
+                            ...prev,
+                            [weekId]: { ...(prev[weekId] || {}), [currentIdx]: scoreWithSentence }
+                        }));
                     }
-                }
-
-                if (!completedSentences.includes(currentIdx)) {
-                    setCompletedSentences(prev => [...prev, currentIdx]);
+                    // Save to Firestore (cloud)
+                    if (user.uid) {
+                        await saveScoreToFirestore(user.uid, user.class, user.studentName, weekId, currentIdx, scoreWithSentence);
+                    }
+                    if (!completedSentences.includes(currentIdx)) {
+                        setCompletedSentences(prev => [...prev, currentIdx]);
+                    }
+                } catch (err) {
+                    console.error('Scoring error:', err);
+                    // Back to 'recorded' so the student can resend the same recording
+                    setScoreError({ ...explainScoringError(err), detail: `${err?.stage || 'unknown'}: ${err?.message || err} | blob ${blob?.size ?? 0}B ${blob?.type || ''}` });
+                    setPhase('recorded');
                 }
                 setIsScoring(false);
             };
 
             const goNext = () => {
+                setScoreError(null);
                 if (currentIdx < totalSentences - 1) {
                     setCurrentIdx(currentIdx + 1);
                     setPhase('ready');
@@ -2275,6 +2373,23 @@ Leo: Deal. Twenty, and ice cream after.`,
                             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
                                 <p className="text-red-700 text-sm font-medium">❌ {audioError}</p>
                                 <p className="text-red-500 text-xs mt-1">請確認 GitHub 倉庫中有對應的 mp3 檔案（例如 W1/W1_S1.mp3）</p>
+                            </div>
+                        )}
+
+                        {/* In-app browser warning (LINE / IG / FB) */}
+                        {isInAppBrowser() && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2">
+                                <p className="text-amber-800 text-sm font-medium">⚠️ 你正在 LINE／IG／FB 裡開啟網頁，錄音和評分可能會失敗。</p>
+                                <p className="text-amber-700 text-xs mt-1">請複製網址，改用 Chrome（Android）或 Safari（iPhone）開啟。</p>
+                            </div>
+                        )}
+
+                        {/* Scoring / saving error message */}
+                        {scoreError && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
+                                <p className="text-red-700 text-sm font-medium">❌ {scoreError.title}</p>
+                                <p className="text-red-600 text-xs mt-1">{scoreError.hint}</p>
+                                <p className="text-gray-400 text-[10px] mt-1 break-all">錯誤代碼（截圖給老師用）：{scoreError.detail}</p>
                             </div>
                         )}
 
