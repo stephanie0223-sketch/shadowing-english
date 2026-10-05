@@ -159,7 +159,10 @@ function getSentenceAudioSrc(weekId, sentenceNum) {
   - 流程: ready → listening(播放音檔) → canRecord → recording(錄音) → recorded(回放) → submitted(AI評分)
   - 8 句精選句，每句有 speaker、vocab、tag、tip
   - AI 即時評分：逐字發音分析 + 語調韻律回饋（分 5 級詳細建議）
-  - 麥克風: 一次性取得權限，保持 stream 持續
+  - 麥克風: 進頁面取得 stream 並保持開著；錄音時若 track 已 ended/muted 就重開（每次錄音都關掉重開會讓部分 iPhone 錄到 0 byte，2026-10 踩過）
+  - iPhone「再聽一次」沒聲音：開著麥克風時 iOS 走通話聽筒。播放前 `navigator.audioSession.type = 'playback'`、錄音前切回 `'play-and-record'`（iOS 16.4+），另在畫面提示戴耳機
+  - 錄音 Blob 用 `mediaRecorder.mimeType`（iPhone 是 audio/mp4，標成 webm 會回放「錯誤」）
+  - 評分／存檔失敗會顯示紅框原因＋錯誤代碼（`explainScoringError` / `explainMicError`），學生截圖即可判斷
 
 ### 教師端 (TeacherPortal)
 
