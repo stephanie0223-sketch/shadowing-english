@@ -1903,11 +1903,18 @@ Leo: Deal. Twenty, and ice cream after.`,
 
             const [micReady, setMicReady] = useState(false);
 
-            // Request microphone ONCE on mount, keep stream alive
+            // Release the microphone. While the mic is open, iPhone switches to call-style
+            // audio and the sentence playback goes silent — so only hold it while recording.
+            const releaseMic = () => {
+                if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+                streamRef.current = null;
+            };
+
+            // Ask for microphone permission once on mount, then release it right away
             useEffect(() => {
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
-                        streamRef.current = stream;
+                        stream.getTracks().forEach(t => t.stop());
                         setMicReady(true);
                     })
                     .catch((err) => {
@@ -1926,6 +1933,8 @@ Leo: Deal. Twenty, and ice cream after.`,
             const [scoreError, setScoreError] = useState(null);
 
             const playSentence = () => {
+                releaseMic();
+                if (audioPlayerRef.current) audioPlayerRef.current.pause();
                 setPhase('listening');
                 setIsPlaying(true);
                 setAudioError(null);
@@ -1951,17 +1960,12 @@ Leo: Deal. Twenty, and ice cream after.`,
 
             const startRecording = async () => {
                 try {
-                    // Reuse existing stream, or request a new one if it was lost.
-                    // iPhone Safari mutes the mic track after the sentence audio plays,
-                    // so a muted / disabled track counts as lost too.
-                    let stream = streamRef.current;
-                    const streamDead = !stream || stream.getAudioTracks().some(t => t.readyState === 'ended' || t.muted || !t.enabled);
-                    if (streamDead) {
-                        if (stream) stream.getTracks().forEach(t => t.stop());
-                        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        streamRef.current = stream;
-                        setMicReady(true);
-                    }
+                    // Open a fresh mic stream for every recording (released again on stop)
+                    if (audioPlayerRef.current) audioPlayerRef.current.pause();
+                    releaseMic();
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    streamRef.current = stream;
+                    setMicReady(true);
 
                     setScoreError(null);
                     audioChunksRef.current = [];
@@ -1979,12 +1983,12 @@ Leo: Deal. Twenty, and ice cream after.`,
                         const blob = new Blob(audioChunksRef.current, { type: mimeType });
                         if (blob.size === 0) {
                             setScoreError(explainScoringError(scoringError('empty', `recorded 0 bytes (${mimeType})`)));
-                            streamRef.current = null; // force a fresh mic stream next time
                         }
                         const url = URL.createObjectURL(blob);
                         setAudioURLs(prev => ({ ...prev, [currentIdx]: url }));
                         setAudioBlobs(prev => ({ ...prev, [currentIdx]: blob }));
-                        // Do NOT stop the stream — keep it alive for next recording
+                        // Release the mic so "再聽一次" and playback have sound on iPhone
+                        releaseMic();
                         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
                         setPhase('recorded');
                     };
